@@ -25,9 +25,11 @@ Use Node.js 20 or newer.
 
 ### 2. Clone and install
 
+The GitHub repository name ends in a period. Windows paths cannot end in a period, so clone it into a safe local folder name:
+
 ```bash
-git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git
-cd J.A.R.V.I.S.
+git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-app
+cd jarvis-app
 npm install
 ```
 
@@ -85,7 +87,7 @@ Natural commands like **"open calculator"** and **"open files"** also work.
 ## Architecture
 
 ```text
-J.A.R.V.I.S.
+jarvis-app/
 ├─ electron/
 │  ├─ main.ts          # Gemini, system info, safe desktop actions
 │  └─ preload.ts       # narrow IPC bridge
