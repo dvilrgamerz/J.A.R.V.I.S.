@@ -736,7 +736,7 @@ function App() {
 
   async function copyMessage(message: Message) {
     if (!permissions.clipboard) {
-      setNotice("Clipboard access is disabled in V4 Permissions.");
+      setNotice("Clipboard access is disabled in V5 Permissions.");
       return;
     }
     if (!message.content.trim()) return;
@@ -784,7 +784,7 @@ function App() {
 
   async function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
     if (!permissions.files) {
-      setNotice("Local file access is disabled in V4 Permissions.");
+      setNotice("Local file access is disabled in V5 Permissions.");
       event.target.value = "";
       return;
     }
@@ -823,7 +823,7 @@ function App() {
       }
 
       if (file.size > 300_000) {
-        setNotice(`${file.name} is over the 300 KB V4 file limit.`);
+        setNotice(`${file.name} is over the 300 KB V5 file limit.`);
         continue;
       }
 
@@ -840,7 +840,7 @@ function App() {
 
     setFiles((current) => [...current, ...nextFiles].slice(0, 5));
     if (nextFiles.length) {
-      setNotice(`${nextFiles.length} local file${nextFiles.length === 1 ? "" : "s"} attached. V4 will retrieve relevant excerpts only.`);
+      setNotice(`${nextFiles.length} local file${nextFiles.length === 1 ? "" : "s"} attached. V5 will retrieve relevant excerpts only.`);
     }
 
     event.target.value = "";
@@ -857,7 +857,7 @@ function App() {
     if (normalized === "/load" || normalized === "load ai") {
       addLocalAssistant(
         sessionId,
-        "V4.1 Cloud is already ready. There is no local AI model to initialize or download."
+        "V5 Cloud is already ready. There is no local AI model to initialize or download."
       );
       return true;
     }
@@ -924,7 +924,7 @@ function App() {
         unit.startsWith("h") ? amount * 3600 : unit.startsWith("m") ? amount * 60 : amount;
 
       if (seconds <= 0 || seconds > 86_400) {
-        addLocalAssistant(sessionId, "V4 timers must be between 1 second and 24 hours.");
+        addLocalAssistant(sessionId, "V5 timers must be between 1 second and 24 hours.");
         return true;
       }
 
@@ -937,7 +937,7 @@ function App() {
           "Notification" in window &&
           Notification.permission === "granted"
         ) {
-          new Notification("J.A.R.V.I.S. V4 Timer", {
+          new Notification("J.A.R.V.I.S. V5 Timer", {
             body: `Timer finished: ${amount}${match[2]}.`
           });
         }
@@ -1134,7 +1134,7 @@ function App() {
 
   function startListening() {
     if (!permissions.microphone) {
-      setNotice("Microphone access is disabled in V4 Permissions.");
+      setNotice("Microphone access is disabled in V5 Permissions.");
       return;
     }
 
@@ -1184,7 +1184,7 @@ function App() {
 
   function exportData() {
     const payload = {
-      version: 4,
+      version: 5,
       exportedAt: new Date().toISOString(),
       sessions,
       memories,
@@ -1207,7 +1207,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "jarvis-v4-backup.json";
+    anchor.download = "jarvis-v5-backup.json";
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -1245,7 +1245,7 @@ function App() {
         setAgentPlan(parsed.agentPlan);
       }
 
-      setNotice("J.A.R.V.I.S. V4 data imported.");
+      setNotice("J.A.R.V.I.S. V5 data imported.");
       setPrivacyOpen(false);
     } catch {
       setNotice("That backup file could not be imported.");
@@ -1311,7 +1311,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell v3-shell v4-shell ${busy ? "is-thinking" : ""}`}>
+    <div className={`app-shell v3-shell v4-shell v5-shell ${busy ? "is-thinking" : ""}`}>
       <div className="scanlines" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
