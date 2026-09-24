@@ -1,23 +1,25 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bot,
   BrainCircuit,
-  ChevronRight,
   CirclePower,
   Cpu,
   ExternalLink,
+  Gauge,
+  Globe2,
   HardDrive,
   MemoryStick,
   Mic,
   MicOff,
   MonitorCog,
   Plus,
+  RefreshCw,
   Send,
   ShieldCheck,
   Sparkles,
   Trash2,
   Volume2,
   VolumeX,
+  Wifi,
   Zap
 } from "lucide-react";
 
@@ -28,11 +30,21 @@ type Message = {
   createdAt: number;
 };
 
+type ModelState = "idle" | "loading" | "ready" | "error";
+
+type WorkerMessage =
+  | { type: "progress"; progress: number; status: string; file?: string }
+  | { type: "ready"; model: string; backend: string }
+  | { type: "result"; id: string; answer: string }
+  | { type: "error"; message: string };
+
+const MODEL_NAME = "Qwen2.5 0.5B · 4-bit";
+
 const starterMessage: Message = {
   id: "welcome",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. online. Systems are standing by. Configure your Gemini key, then ask me anything or use a quick action.",
+    "J.A.R.V.I.S. web core online. I use a local browser model with no API key. Activate the AI core once, then chat normally.",
   createdAt: Date.now()
 };
 
@@ -45,12 +57,14 @@ function readStored<T>(key: string, fallback: T): T {
   }
 }
 
-function formatUptime(minutes?: number) {
-  if (typeof minutes !== "number") return "—";
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
+function formatStorage(bytes?: number) {
+  if (!bytes) return "—";
+  const gb = bytes / 1024 ** 3;
+  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(bytes / 1024 ** 2)} MB`;
+}
+
+function openExternal(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 function App() {
@@ -65,13 +79,82 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [systemInfo, setSystemInfo] = useState<JarvisSystemInfo | null>(null);
-  const [config, setConfig] = useState<JarvisConfig | null>(null);
-  const [notice, setNotice] = useState<string>("");
+  const [modelState, setModelState] = useState<ModelState>("idle");
+  const [modelProgress, setModelProgress] = useState(0);
+  const [modelStatus, setModelStatus] = useState("AI core not loaded");
+  const [backend, setBackend] = useState("—");
+  const [notice, setNotice] = useState("");
+  const [online, setOnline] = useState(navigator.onLine);
+  const [storageUsage, setStorageUsage] = useState<number | undefined>();
+  const workerRef = useRef<Worker | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
 
+  const hasWebGPU = "gpu" in navigator;
+  const cpuThreads = navigator.hardwareConcurrency || 0;
+  const deviceMemory = navigator.deviceMemory;
+
   useEffect(() => {
-    localStorage.setItem("jarvis.messages", JSON.stringify(messages.slice(-100)));
+    const worker = new Worker(new URL("./ai.worker.ts", import.meta.url), {
+      type: "module"
+    });
+
+    workerRef.current = worker;
+
+    worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
+      const data = event.data;
+
+      if (data.type === "progress") {
+        setModelState("loading");
+        setModelProgress(data.progress || 0);
+        setModelStatus(data.status || "Loading local AI");
+        return;
+      }
+
+      if (data.type === "ready") {
+        setModelState("ready");
+        setModelProgress(1);
+        setModelStatus("AI core ready");
+        setBackend(data.backend);
+        setNotice(`${data.model} loaded with ${data.backend}.`);
+        return;
+      }
+
+      if (data.type === "result") {
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: data.answer,
+          createdAt: Date.now()
+        };
+        setMessages((current) => [...current, assistantMessage]);
+        setBusy(false);
+        speak(data.answer);
+        return;
+      }
+
+      if (data.type === "error") {
+        setBusy(false);
+        setModelState((current) => (current === "ready" ? current : "error"));
+        setModelStatus("AI core error");
+        setNotice(data.message);
+      }
+    };
+
+    worker.onerror = () => {
+      setBusy(false);
+      setModelState("error");
+      setModelStatus("Worker error");
+      setNotice("The local AI worker crashed. Reload the page and try again.");
+    };
+
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.messages", JSON.stringify(messages.slice(-80)));
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -80,30 +163,29 @@ function App() {
   }, [memories]);
 
   useEffect(() => {
-    void Promise.all([window.jarvis.getSystemInfo(), window.jarvis.getConfig()]).then(
-      ([info, cfg]) => {
-        setSystemInfo(info);
-        setConfig(cfg);
-      }
-    );
-  }, []);
+    const updateOnline = () => setOnline(navigator.onLine);
+    window.addEventListener("online", updateOnline);
+    window.addEventListener("offline", updateOnline);
+
+    if (navigator.storage?.estimate) {
+      void navigator.storage.estimate().then((estimate) => {
+        setStorageUsage(estimate.usage);
+      });
+    }
+
+    return () => {
+      window.removeEventListener("online", updateOnline);
+      window.removeEventListener("offline", updateOnline);
+    };
+  }, [modelState]);
 
   const status = useMemo(() => {
-    if (busy) return "PROCESSING";
-    if (!config?.aiConfigured) return "SETUP REQUIRED";
-    return "ONLINE";
-  }, [busy, config]);
-
-  function addMessage(role: Message["role"], content: string) {
-    const message: Message = {
-      id: crypto.randomUUID(),
-      role,
-      content,
-      createdAt: Date.now()
-    };
-    setMessages((current) => [...current, message]);
-    return message;
-  }
+    if (busy) return "THINKING";
+    if (modelState === "loading") return "LOADING";
+    if (modelState === "ready") return "ONLINE";
+    if (modelState === "error") return "ERROR";
+    return "STANDBY";
+  }, [busy, modelState]);
 
   function speak(text: string) {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
@@ -114,49 +196,55 @@ function App() {
     window.speechSynthesis.speak(utterance);
   }
 
-  async function runQuickAction(action: "calculator" | "notepad" | "paint" | "files") {
-    const result = await window.jarvis.openApp(action);
-    setNotice(result.ok ? `Opening ${action}.` : result.error || "Action failed.");
+  function loadModel() {
+    if (modelState === "loading") return;
+    setModelState("loading");
+    setModelProgress(0);
+    setModelStatus("Starting local AI download/load…");
+    setNotice(
+      hasWebGPU
+        ? "Loading the 4-bit model with WebGPU. The first load downloads model files; later loads can reuse browser cache."
+        : "WebGPU is not available, so J.A.R.V.I.S. will use the slower CPU/WASM fallback."
+    );
+    workerRef.current?.postMessage({ type: "load" });
+  }
+
+  function clearChat() {
+    setMessages([starterMessage]);
+    setNotice("Conversation cleared.");
   }
 
   async function handleLocalCommand(text: string): Promise<boolean> {
     const normalized = text.trim().toLowerCase();
 
-    const appCommands: Record<string, "calculator" | "notepad" | "paint" | "files"> = {
-      "/calc": "calculator",
-      "open calculator": "calculator",
-      "/notepad": "notepad",
-      "open notepad": "notepad",
-      "/paint": "paint",
-      "open paint": "paint",
-      "/files": "files",
-      "open files": "files",
-      "open file explorer": "files"
-    };
+    if (normalized === "/clear" || normalized === "/new") {
+      clearChat();
+      return true;
+    }
 
-    if (appCommands[normalized]) {
-      addMessage("user", text);
-      const result = await window.jarvis.openApp(appCommands[normalized]);
-      const reply = result.ok
-        ? `Opening ${appCommands[normalized]}.`
-        : result.error || "I couldn't open that app.";
-      addMessage("assistant", reply);
-      speak(reply);
+    if (normalized === "/load" || normalized === "load ai" || normalized === "activate ai") {
+      loadModel();
       return true;
     }
 
     if (normalized === "/youtube" || normalized === "open youtube") {
-      addMessage("user", text);
-      const result = await window.jarvis.openExternal("https://www.youtube.com");
-      const reply = result.ok ? "Opening YouTube." : result.error || "I couldn't open YouTube.";
-      addMessage("assistant", reply);
-      speak(reply);
+      openExternal("https://www.youtube.com");
+      setNotice("Opened YouTube in a new tab.");
       return true;
     }
 
-    if (normalized === "/clear") {
-      setMessages([starterMessage]);
-      setNotice("Conversation cleared.");
+    if (normalized === "/github" || normalized === "open github") {
+      openExternal("https://github.com/dvilrgamerz/J.A.R.V.I.S.");
+      setNotice("Opened the J.A.R.V.I.S. repository.");
+      return true;
+    }
+
+    if (normalized.startsWith("/search ")) {
+      const query = text.slice(8).trim();
+      if (query) {
+        openExternal(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
+        setNotice("Opened your web search in a new tab.");
+      }
       return true;
     }
 
@@ -172,32 +260,33 @@ function App() {
 
     if (await handleLocalCommand(text)) return;
 
-    const userMessage = addMessage("user", text);
+    if (modelState !== "ready") {
+      setNotice("Activate the local AI core first. No API key is needed.");
+      if (modelState === "idle" || modelState === "error") loadModel();
+      return;
+    }
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+      createdAt: Date.now()
+    };
+
+    const history = [...messages, userMessage]
+      .filter((message) => message.id !== "welcome")
+      .slice(-14)
+      .map(({ role, content }) => ({ role, content }));
+
+    setMessages((current) => [...current, userMessage]);
     setBusy(true);
 
-    try {
-      const history = [...messages, userMessage]
-        .filter((message) => message.id !== "welcome")
-        .slice(-24)
-        .map(({ role, content }) => ({ role, content }));
-
-      const result = await window.jarvis.chat({
-        messages: history,
-        memories
-      });
-
-      const answer = result.ok
-        ? result.answer || "I received no response."
-        : result.error || "I couldn't reach the AI service.";
-
-      addMessage("assistant", answer);
-      speak(answer);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unexpected error.";
-      addMessage("assistant", message);
-    } finally {
-      setBusy(false);
-    }
+    workerRef.current?.postMessage({
+      type: "generate",
+      id: userMessage.id,
+      messages: history,
+      memories
+    });
   }
 
   function submit(event: FormEvent) {
@@ -210,7 +299,7 @@ function App() {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognitionCtor) {
-      setNotice("Speech recognition is not available in this Electron build. You can still type.");
+      setNotice("Speech recognition is not supported in this browser. You can still type.");
       return;
     }
 
@@ -223,7 +312,7 @@ function App() {
     recognition.onend = () => setListening(false);
     recognition.onerror = () => {
       setListening(false);
-      setNotice("Voice recognition stopped. Check microphone permissions.");
+      setNotice("Voice recognition stopped. Check your browser microphone permission.");
     };
     recognition.onresult = (event: any) => {
       const transcript = event.results?.[0]?.[0]?.transcript?.trim();
@@ -253,7 +342,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>DESKTOP INTELLIGENCE</p>
+            <p>BROWSER INTELLIGENCE</p>
           </div>
         </div>
 
@@ -264,38 +353,40 @@ function App() {
             <div className="reactor-ring ring-three" />
             <div className="reactor-core"><CirclePower size={31} /></div>
           </div>
+
           <div className="status-line">
-            <span className={`status-dot ${config?.aiConfigured ? "online" : "warning"}`} />
+            <span className={`status-dot ${modelState === "ready" ? "online" : "warning"}`} />
             <span>{status}</span>
           </div>
-          <p className="model-name">{config?.model || "Loading AI core…"}</p>
+          <p className="model-name">{MODEL_NAME} · {backend}</p>
         </section>
 
         <section className="panel-section">
           <div className="section-title">
             <MonitorCog size={15} />
-            <span>SYSTEM TELEMETRY</span>
+            <span>BROWSER TELEMETRY</span>
           </div>
+
           <div className="telemetry-grid">
             <div className="telemetry-item">
               <Cpu size={16} />
-              <span>CPU</span>
-              <strong>{systemInfo?.cores ?? "—"} cores</strong>
+              <span>THREADS</span>
+              <strong>{cpuThreads || "—"}</strong>
             </div>
             <div className="telemetry-item">
               <MemoryStick size={16} />
               <span>MEMORY</span>
-              <strong>{systemInfo ? `${systemInfo.memoryGb} GB` : "—"}</strong>
+              <strong>{deviceMemory ? `${deviceMemory} GB+` : "Browser hidden"}</strong>
+            </div>
+            <div className="telemetry-item">
+              <Gauge size={16} />
+              <span>WEBGPU</span>
+              <strong>{hasWebGPU ? "Available" : "Fallback"}</strong>
             </div>
             <div className="telemetry-item">
               <HardDrive size={16} />
-              <span>HOST</span>
-              <strong>{systemInfo?.hostname || "—"}</strong>
-            </div>
-            <div className="telemetry-item">
-              <Zap size={16} />
-              <span>UPTIME</span>
-              <strong>{formatUptime(systemInfo?.uptimeMinutes)}</strong>
+              <span>CACHE USED</span>
+              <strong>{formatStorage(storageUsage)}</strong>
             </div>
           </div>
         </section>
@@ -305,6 +396,7 @@ function App() {
             <BrainCircuit size={15} />
             <span>LOCAL MEMORY</span>
           </div>
+
           <div className="memory-list">
             {memories.length === 0 ? (
               <p className="empty-note">No saved memories yet.</p>
@@ -322,6 +414,7 @@ function App() {
               ))
             )}
           </div>
+
           <div className="memory-add">
             <input
               value={memoryDraft}
@@ -330,24 +423,27 @@ function App() {
                 if (event.key === "Enter") saveMemory();
               }}
               placeholder="Remember something…"
-              maxLength={500}
+              maxLength={400}
             />
-            <button onClick={saveMemory} aria-label="Save memory"><Plus size={16} /></button>
+            <button onClick={saveMemory} aria-label="Save memory">
+              <Plus size={16} />
+            </button>
           </div>
         </section>
 
         <div className="security-badge">
           <ShieldCheck size={16} />
-          <span>Permission-gated desktop tools</span>
+          <span>AI runs in your browser · no API key</span>
         </div>
       </aside>
 
       <main className="main-panel">
         <header className="topbar">
           <div>
-            <span className="eyebrow">COMMAND INTERFACE</span>
-            <h2>Good to see you.</h2>
+            <span className="eyebrow">WEB COMMAND INTERFACE</span>
+            <h2>J.A.R.V.I.S. is standing by.</h2>
           </div>
+
           <div className="top-actions">
             <button
               className={`icon-button ${voiceEnabled ? "active" : ""}`}
@@ -356,30 +452,69 @@ function App() {
             >
               {voiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
             </button>
+
             <button
               className="github-button"
-              onClick={() => void window.jarvis.openExternal("https://github.com/dvilrgamerz/J.A.R.V.I.S.")}
+              onClick={() => openExternal("https://github.com/dvilrgamerz/J.A.R.V.I.S.")}
             >
               Repository <ExternalLink size={15} />
             </button>
           </div>
         </header>
 
-        {!config?.aiConfigured && config && (
-          <div className="setup-banner">
-            <div>
-              <strong>AI core needs a key</strong>
-              <span>Copy .env.example to .env and set GEMINI_API_KEY, then restart J.A.R.V.I.S.</span>
+        {modelState !== "ready" && (
+          <div className="setup-banner model-loader">
+            <div className="model-loader-copy">
+              <strong>
+                {modelState === "loading"
+                  ? "Loading local AI core"
+                  : modelState === "error"
+                    ? "AI core needs another try"
+                    : "No API key required"}
+              </strong>
+              <span>{modelStatus}</span>
+
+              {modelState === "loading" && (
+                <div className="progress-track" aria-label="Model load progress">
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${Math.round(modelProgress * 100)}%` }}
+                  />
+                </div>
+              )}
             </div>
-            <ChevronRight size={18} />
+
+            <button
+              className="activate-button"
+              onClick={loadModel}
+              disabled={modelState === "loading"}
+            >
+              <Zap size={15} />
+              {modelState === "loading"
+                ? `${Math.round(modelProgress * 100)}%`
+                : modelState === "error"
+                  ? "Retry"
+                  : "Activate AI"}
+            </button>
           </div>
         )}
 
         <section className="quick-actions" aria-label="Quick actions">
-          <button onClick={() => void runQuickAction("calculator")}><Cpu size={16} /> Calculator</button>
-          <button onClick={() => void runQuickAction("notepad")}><Bot size={16} /> Notepad</button>
-          <button onClick={() => void runQuickAction("files")}><HardDrive size={16} /> Files</button>
-          <button onClick={() => void window.jarvis.openExternal("https://www.youtube.com")}><ExternalLink size={16} /> YouTube</button>
+          <button onClick={loadModel} disabled={modelState === "loading"}>
+            <RefreshCw size={16} /> AI Core
+          </button>
+          <button onClick={clearChat}>
+            <Trash2 size={16} /> Clear Chat
+          </button>
+          <button onClick={() => openExternal("https://www.youtube.com")}>
+            <Globe2 size={16} /> YouTube
+          </button>
+          <button onClick={() => openExternal("https://github.com/dvilrgamerz/J.A.R.V.I.S.")}>
+            <ExternalLink size={16} /> GitHub
+          </button>
+          <button disabled>
+            <Wifi size={16} /> {online ? "Online" : "Offline"}
+          </button>
         </section>
 
         <section className="chat-card">
@@ -389,6 +524,7 @@ function App() {
                 <div className="message-avatar">
                   {message.role === "assistant" ? <Sparkles size={17} /> : "YOU"}
                 </div>
+
                 <div className="message-content">
                   <div className="message-meta">
                     <strong>{message.role === "assistant" ? "J.A.R.V.I.S." : "YOU"}</strong>
@@ -408,16 +544,21 @@ function App() {
               <article className="message-row assistant">
                 <div className="message-avatar"><Sparkles size={17} /></div>
                 <div className="message-content">
-                  <div className="message-meta"><strong>J.A.R.V.I.S.</strong><span>processing</span></div>
+                  <div className="message-meta">
+                    <strong>J.A.R.V.I.S.</strong>
+                    <span>local inference</span>
+                  </div>
                   <div className="thinking"><i /><i /><i /></div>
                 </div>
               </article>
             )}
+
             <div ref={endRef} />
           </div>
 
           <div className="composer-zone">
             {notice && <div className="notice">{notice}</div>}
+
             <form className="composer" onSubmit={submit}>
               <button
                 type="button"
@@ -427,6 +568,7 @@ function App() {
               >
                 {listening ? <MicOff size={19} /> : <Mic size={19} />}
               </button>
+
               <textarea
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
@@ -436,16 +578,28 @@ function App() {
                     void sendMessage();
                   }
                 }}
-                placeholder={listening ? "Listening…" : "Ask J.A.R.V.I.S. or type /calc, /files, /youtube…"}
+                placeholder={
+                  listening
+                    ? "Listening…"
+                    : modelState === "ready"
+                      ? "Ask J.A.R.V.I.S. anything…"
+                      : "Activate the AI core, then start chatting…"
+                }
                 rows={1}
-                maxLength={8000}
+                maxLength={5000}
               />
-              <button className="send-button" type="submit" disabled={busy || !input.trim()}>
+
+              <button
+                className="send-button"
+                type="submit"
+                disabled={busy || !input.trim()}
+              >
                 <Send size={18} />
               </button>
             </form>
+
             <p className="composer-hint">
-              Local memories stay on this PC. Desktop tools are allowlisted and do not run arbitrary shell commands.
+              No AI API key. Model inference runs locally in the browser. /clear · /load · /youtube · /github · /search query
             </p>
           </div>
         </section>
