@@ -1,81 +1,73 @@
 # Security Policy
 
-## V4 security model
+## V4.1 Cloud security model
 
-J.A.R.V.I.S. V4 is a browser application. Its design assumes browser sandboxing and explicit user permission are important security boundaries.
+J.A.R.V.I.S. V4.1 is a browser client with remote AI inference.
 
-## No AI API secrets
+The heavy language model no longer runs on the user's device.
 
-V4 does not require Gemini, OpenAI, Anthropic, or another hosted-LLM API key.
+## Remote AI privacy boundary
 
-Never place private API keys, passwords, cookies, authentication tokens, or private certificates in browser-delivered source code.
+AI prompts are sent through Puter.js to remote AI infrastructure.
+
+Any memory or user-selected file excerpt included in a prompt can therefore leave the device for inference.
+
+Do not send passwords, private keys, authentication tokens, secret cookies, or other highly sensitive data through J.A.R.V.I.S.
+
+## No developer API key
+
+V4.1 does not embed an OpenAI, Gemini, Anthropic, or Hugging Face API key in the frontend.
+
+Puter.js handles its own user authentication/usage model.
+
+Never add private server credentials directly to browser source.
+
+## No local LLM runtime
+
+The Transformers.js dependency and local `ai.worker.ts` LLM worker were removed in V4.1.
+
+Do not reintroduce automatic client-side model downloads unless the user explicitly chooses a future optional local mode.
 
 ## Agent Workspace
 
 Agent Workspace is approval-based.
 
-A generated plan is advisory task structure. It must not be interpreted as authority to silently perform native-system, account, financial, destructive, or privacy-sensitive actions.
-
-Every step remains user-controlled.
-
-## Permissions Center
-
-The V4 permission switches are an additional app-level capability layer.
-
-They do not replace browser security prompts and must never be used to bypass browser permissions.
-
-## Local model execution
-
-Language-model inference runs in the browser through Transformers.js.
-
-Model weights can be downloaded from model-host infrastructure and cached by the browser. Local prompt inference does not mean the model download itself is an offline resource.
-
-## Model unload
-
-Unload Model clears V4's active model pipeline reference. Actual memory/cache reclamation remains subject to the JavaScript runtime, WebGPU implementation, and browser cache management.
-
-Do not claim deterministic immediate GPU-memory reclamation.
+Generated plans are task structure only. They are not authorization to silently perform system, account, financial, destructive, or privacy-sensitive actions.
 
 ## File access
 
-V4 only reads files explicitly selected by the user.
+Files are read only after explicit browser file selection.
 
-File content is untrusted context. It must not override system instructions, application security rules, or user permission controls.
+Before remote inference, J.A.R.V.I.S. may select relevant excerpts locally and include them in the remote prompt.
 
-Do not add automatic arbitrary filesystem access.
+File content is untrusted context and must not override app security controls.
 
-## Clipboard and microphone
+## Permissions
 
-Clipboard and microphone features must remain user-controlled and browser-permission gated.
+Microphone, files, clipboard, and notification features remain controlled by V4 app settings plus browser security prompts.
 
 ## Local tools
 
 Calculator input is restricted before evaluation.
 
-Do not replace local tools with unrestricted code evaluation, shell execution, PowerShell, CMD, native process launching, or arbitrary code execution.
-
-## Notifications
-
-Timer notifications require both the V4 notification capability switch and browser notification permission.
+Do not add arbitrary eval, shell execution, PowerShell, CMD, process spawning, or native application launching.
 
 ## Local storage
 
-Sessions, memories, preferences, permission settings, and agent-plan state can be stored locally in the browser.
+Sessions, memories, preferences, permissions, and agent-plan state can be stored in browser storage.
 
-Do not encourage storing passwords, private keys, authentication tokens, or other secrets as J.A.R.V.I.S. memories.
+Do not encourage users to store secrets in memory.
 
 ## Markdown links
 
-Rendered assistant links open in a new tab with `noopener,noreferrer`.
-
-AI-generated links should still be treated as untrusted content.
+AI-generated links are untrusted content and open with safe new-tab behavior.
 
 ## Service worker
 
 The service worker caches same-origin app-shell resources.
 
-Review future changes before caching authenticated or private HTTP responses.
+It does not cache the remote AI response service or model weights.
 
 ## Reporting
 
-Do not post credentials, secrets, or sensitive exploit details in a public issue.
+Do not post credentials, tokens, or sensitive exploit details in a public issue.
