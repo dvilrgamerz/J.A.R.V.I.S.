@@ -1,133 +1,93 @@
-# J.A.R.V.I.S. Web AI V4
+# J.A.R.V.I.S. Web AI V4.1 Cloud
 
-J.A.R.V.I.S. V4 is a **private, keyless, multi-model AI web app** that runs language-model inference inside the browser.
+J.A.R.V.I.S. V4.1 is a fast web AI assistant designed so the **language model does not run on the user's phone or laptop**.
 
-No Gemini key, OpenAI key, Ollama server, or paid AI backend is required.
+The browser is now a thin client. Heavy AI inference runs remotely through Puter.js instead of Transformers/WebGPU on the user's device.
 
-## What V4 adds
+## Why V4.1 Cloud
 
-V4 keeps the V3 multi-model local AI foundation and adds:
+The old local-browser architecture could download hundreds of MB or more of model files and use significant CPU/GPU/RAM.
 
-- **Agent Workspace** with approval-based task planning
-- manual Start / Complete / Skip / Reopen controls for every agent step
-- Ask JARVIS action for the currently approved step
-- richer Markdown output
-- tables, headings, lists, links, inline code, and fenced code blocks
-- explicit **Permissions Center**
-- microphone capability toggle
-- local-file capability toggle
-- clipboard capability toggle
-- timer-notification capability toggle
-- **Unload Model** control to release the active model pipeline
-- estimated output tokens
-- approximate tokens-per-second telemetry
-- stronger hybrid local retrieval using words, phrase features, and character features
-- V4 backup/export now includes permissions and agent-plan state
-- updated V4 installable PWA shell
+V4.1 removes that local LLM runtime entirely.
 
-## Agent Workspace
+Users now get:
 
-Agent Workspace turns a goal into a short task plan.
+- no local LLM download
+- no local WebGPU inference
+- no large AI model in device RAM
+- much lower CPU/GPU load
+- faster time-to-first-use
+- streamed remote responses
+- the existing J.A.R.V.I.S. UI, sessions, memory, files, tools, voice, and Agent Workspace
 
-Example:
+## Remote AI
 
-```text
-Goal: Build and test the next version of my website
-```
+V4.1 uses Puter.js remote AI with GPT-5.6 Luna as the current fast model route.
 
-J.A.R.V.I.S. generates a small list of concrete steps. You then control each step:
+The site itself does **not** require a developer API key.
 
-- **Start**
-- **Ask JARVIS**
-- **Complete**
-- **Skip**
-- **Reopen**
+Puter uses a user-pays model: users may need to authenticate with Puter and their Puter account is responsible for AI usage/costs and provider limits.
 
-V4 does **not** silently execute operating-system or browser actions. The agent is deliberately approval-based so the user remains in control.
+## What still runs in the browser
 
-## Local models
+Only lightweight work remains client-side:
 
-| Tier | Model | Intended use |
-| --- | --- | --- |
-| **Lite** | HuggingFaceTB/SmolLM2-360M-Instruct | phones, weak PCs, CPU fallback |
-| **Standard** | onnx-community/Qwen2.5-0.5B-Instruct | normal devices |
-| **Power** | onnx-community/Qwen2.5-1.5B-Instruct | stronger WebGPU devices |
+- React UI
+- chat/session storage
+- local memory ranking
+- small text-vector calculations
+- selecting relevant file excerpts
+- browser speech recognition/synthesis
+- calculator/converter/timer tools
+- permissions and privacy controls
+- PWA shell
 
-Auto mode chooses a model from available browser capabilities.
+The actual language-model inference is remote.
 
-Only one model pipeline is kept active at a time. Use **Unload Model** to release the active pipeline reference when you want to free memory.
+## V4 Agent Workspace
 
-## Inference modes
+Agent Workspace remains approval-based.
 
-- **Auto** — device/model-aware
-- **Turbo** — fastest and shortest
-- **Balanced** — everyday use
-- **Smart** — longer context and deeper output
+J.A.R.V.I.S. can generate a step plan for a goal, but it does not silently control the operating system or execute arbitrary native actions.
 
-## Response telemetry
+Each step can be:
 
-V4 shows:
+- Start
+- Ask JARVIS
+- Complete
+- Skip
+- Reopen
 
-- first-text latency
-- total generation time
-- estimated output tokens
-- approximate tokens per second
+## Response modes
 
-Tokens-per-second is an estimate based on generated text length, not tokenizer-exact benchmarking.
+The existing profiles now control **remote response behavior**, not local hardware load:
+
+- **Fast Cloud** — shortest/faster replies
+- **Balanced Cloud** — normal everyday answers
+- **Smart Cloud** — more context and deeper answers
+- **Auto Cloud** — defaults toward speed
+
+All profiles use remote inference.
 
 ## Rich responses
 
-Assistant messages are rendered as Markdown with GitHub-flavored Markdown support.
-
-Supported presentation includes:
+Assistant replies support Markdown:
 
 - headings
 - lists
 - tables
 - links
-- blockquotes
+- quotes
 - inline code
 - fenced code blocks
 
-## Permissions Center
+## Memory + file context
 
-V4 adds an app-level capability layer for:
+Memories and user-selected text/code files are still filtered locally before being sent as context.
 
-- microphone
-- local files
-- clipboard
-- timer notifications
+Only relevant memory/file excerpts are added to a prompt.
 
-These switches do not bypass browser permission systems. The browser can still deny a capability even when it is enabled inside J.A.R.V.I.S.
-
-## Memory and file retrieval
-
-V4 keeps user-approved memories in browser storage.
-
-For retrieval, it builds lightweight local feature vectors from:
-
-- useful words
-- adjacent-word phrase features
-- character-level features
-
-It ranks memories and file chunks locally and injects only the most relevant context into the prompt.
-
-This keeps V4 keyless and avoids downloading a second embedding model.
-
-## Local file chat
-
-Supported files:
-
-- TXT
-- Markdown
-- JSON
-- CSV
-- JavaScript / TypeScript
-- JSX / TSX
-- Python
-- HTML / CSS
-- XML
-- YAML
+Supported local file types include TXT, Markdown, JSON, CSV, JS/TS, JSX/TSX, Python, HTML/CSS, XML, and YAML.
 
 Current limits:
 
@@ -135,9 +95,26 @@ Current limits:
 - up to 300 KB each
 - text/code files only
 
-Files must be explicitly selected by the user.
+## Privacy note
 
-## Built-in tools
+Moving AI inference to remote infrastructure means prompts and selected context sent for an AI answer leave the device and are processed through Puter/provider infrastructure.
+
+Do not store passwords, private keys, authentication tokens, or other secrets in J.A.R.V.I.S. memory or prompts.
+
+## Permissions Center
+
+V4 keeps app-level controls for:
+
+- microphone
+- local files
+- clipboard
+- timer notifications
+
+Browser permission prompts still apply.
+
+## Built-in local tools
+
+These do not need AI inference:
 
 ```text
 /calc 12 * (3 + 4)
@@ -154,76 +131,29 @@ Files must be explicitly selected by the user.
 /load
 ```
 
-Timer notifications are shown only when enabled in V4 Permissions and granted by the browser.
-
-## Voice
-
-V4 keeps:
-
-- browser speech recognition when supported
-- speech synthesis
-- optional hands-free conversation loop
-
-Microphone capability can be disabled independently in V4 Permissions.
-
-## Sessions and editing
-
-V4 supports:
-
-- multiple local sessions
-- edit + resend
-- regenerate
-- copy
-- stop generation
-- session deletion/clearing
-
-## Privacy Center
-
-V4 can export/import:
-
-- chat sessions
-- memories
-- model/mode/personality settings
-- permission settings
-- active agent plan
-
-It can also clear local app state and accessible app caches.
-
-## PWA / offline shell
-
-V4 includes:
-
-- `manifest.webmanifest`
-- standalone install metadata
-- `public/sw.js`
-- same-origin app-shell caching
-
-Large AI model downloads remain browser/model-host managed rather than being bundled into the PWA shell.
-
 ## Architecture
 
 ```text
-Browser
+Phone / Laptop Browser
   |
-  +-- React V4 HUD
+  +-- Lightweight J.A.R.V.I.S. UI
   |     +-- sessions
-  |     +-- Agent Workspace
-  |     +-- permissions
-  |     +-- files + memory
-  |     +-- local tools
+  |     +-- local memory ranking
+  |     +-- file excerpt selection
+  |     +-- voice + tools
   |
-  +-- AI Web Worker
-        +-- model switching
-        +-- streaming
-        +-- interrupt/stop
-        +-- agent planning
-        +-- hybrid retrieval
-        +-- WebGPU / WASM
+  +-- Puter.js
+        |
+        +-- Remote AI provider
+              |
+              +-- heavy model inference on remote GPUs
 ```
+
+There is no Transformers.js LLM worker in V4.1.
 
 ## Run locally
 
-The GitHub repository name ends in a period, so clone it into a Windows-safe directory name:
+The GitHub repo name ends in a period, so on Windows clone it into a safe folder:
 
 ```powershell
 git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-web
@@ -238,7 +168,7 @@ npm run dev
 npm run build
 ```
 
-The static build is generated in:
+Output:
 
 ```text
 dist/
@@ -248,29 +178,19 @@ dist/
 
 - build command: `npm run build`
 - publish directory: `dist`
-- AI API environment variables: **none**
+- developer AI API key: **none**
+
+The frontend loads Puter.js at runtime for remote AI.
 
 ## Browser limitations
 
-A browser web app cannot silently:
+A web app still cannot silently:
 
 - run arbitrary PowerShell or CMD
 - launch arbitrary native applications
 - inspect arbitrary local files without selection
 - take unrestricted operating-system control
-- secretly access camera, microphone, clipboard, or accounts
-
-These restrictions are intentional.
-
-## Possible V4.x upgrades
-
-- dedicated local embedding model
-- local Whisper-style speech recognition
-- persistent indexed document library
-- URL ingestion with explicit user permission
-- richer per-model storage management
-- syntax highlighting
-- more advanced task dependencies and subtasks
+- secretly access microphone, clipboard, camera, or accounts
 
 ## License
 
