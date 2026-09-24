@@ -2520,3 +2520,45 @@ textarea:focus-visible {
     flex: 1 1 auto;
   }
 }
+
+
+/* ===== V4.1 Cloud status ===== */
+.cloud-ready-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(92, 233, 255, 0.15);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(17, 104, 128, 0.12), rgba(3, 18, 27, 0.62));
+}
+
+.cloud-ready-banner > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cloud-ready-banner strong {
+  color: #baf6ff;
+  font-family: Rajdhani, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.cloud-ready-banner span {
+  color: #648592;
+  font-size: 8px;
+}
+
+.cloud-ready-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #5bf3b2;
+  box-shadow: 0 0 12px rgba(91, 243, 178, 0.7);
+}
