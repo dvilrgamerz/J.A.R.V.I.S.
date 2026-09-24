@@ -1356,7 +1356,7 @@ function App() {
             </button>
 
             <button className="icon-button" onClick={installApp} title="Install web app">
-              <Install size={18} />
+              <Download size={18} />
             </button>
 
             <button
