@@ -1,14 +1,17 @@
 {
-  "name": "J.A.R.V.I.S. Web AI V4",
+  "name": "J.A.R.V.I.S. Web AI V4.1 Cloud",
   "short_name": "J.A.R.V.I.S.",
-  "description": "Private multi-model browser AI with approval-based agent planning, local memory, file chat, permissions, voice and tools.",
+  "description": "Fast remote AI assistant with agent planning, memory, files, voice and tools without running an LLM on the user's device.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#02070d",
   "theme_color": "#02070d",
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/jarvis.svg",
