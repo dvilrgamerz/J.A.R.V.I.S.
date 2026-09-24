@@ -1045,7 +1045,7 @@ function App() {
         unit.startsWith("h") ? amount * 3600 : unit.startsWith("m") ? amount * 60 : amount;
 
       if (seconds <= 0 || seconds > 86_400) {
-        addLocalAssistant(sessionId, "V3 timers must be between 1 second and 24 hours.");
+        addLocalAssistant(sessionId, "V4 timers must be between 1 second and 24 hours.");
         return true;
       }
 
@@ -1113,7 +1113,7 @@ function App() {
 
     if (modelState !== "ready" || loadedModelKey !== resolvedModel) {
       setQueuedPrompt({ text, sessionId });
-      setNotice("Command queued. V3 will answer when the selected local model is ready.");
+      setNotice("Command queued. V4 will answer when the selected local model is ready.");
       loadModel(resolvedModel);
       return;
     }
@@ -1134,7 +1134,7 @@ function App() {
     };
 
     const history = [...baseMessages, userMessage]
-      .filter((message) => message.id !== "welcome-v3" && !message.streaming)
+      .filter((message) => message.id !== "welcome-v4" && !message.streaming)
       .slice(-18)
       .map(({ role, content }) => ({ role, content }));
 
@@ -1420,7 +1420,7 @@ function App() {
         <section className="panel-section">
           <div className="section-title">
             <MonitorCog size={15} />
-            <span>V3 TELEMETRY</span>
+            <span>V4 TELEMETRY</span>
           </div>
 
           <div className="device-tier-card">
@@ -1712,7 +1712,7 @@ function App() {
               <strong>
                 {modelState === "loading"
                   ? `Loading ${MODEL_INFO[resolvedModel].label} model`
-                  : "V3 neural core is in standby"}
+                  : "V4 neural core is in standby"}
               </strong>
               <span>{modelStatus}</span>
 
@@ -1846,7 +1846,7 @@ function App() {
                       )}
 
                       {message.role === "assistant" &&
-                        message.id !== "welcome-v3" &&
+                        message.id !== "welcome-v4" &&
                         !message.streaming && (
                           <>
                             <button onClick={() => regenerate(message.id)} title="Regenerate">
