@@ -1,8 +1,8 @@
 {
   "name": "jarvis-web-ai",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "A keyless J.A.R.V.I.S.-inspired AI web app that runs a quantized language model directly in the browser.",
+  "description": "J.A.R.V.I.S. V3: a keyless multi-model AI web app with local memory, file chat, voice, tools, sessions and WebGPU.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
