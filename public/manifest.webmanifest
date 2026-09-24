@@ -1,7 +1,7 @@
 {
-  "name": "J.A.R.V.I.S. Web AI V4.1 Cloud",
+  "name": "J.A.R.V.I.S. Web AI V5 Cloud",
   "short_name": "J.A.R.V.I.S.",
-  "description": "Fast remote AI assistant with agent planning, memory, files, voice and tools without running an LLM on the user's device.",
+  "description": "Responsive remote AI assistant with automatic routing, failover, live Research mode, agent planning, memory, files, voice and tools.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
