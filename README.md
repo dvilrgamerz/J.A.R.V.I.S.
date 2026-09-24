@@ -1,97 +1,157 @@
-# J.A.R.V.I.S. Web AI V2
+# J.A.R.V.I.S. Web AI V3
 
-A futuristic **keyless local AI web app** inspired by J.A.R.V.I.S.
+A private, keyless, multi-model AI assistant that runs directly in the browser.
 
-J.A.R.V.I.S. V2 runs a quantized language model directly in the browser with Transformers.js. No Gemini key, OpenAI key, Ollama service, or AI backend is required.
+J.A.R.V.I.S. V3 uses Transformers.js with local browser inference. No Gemini key, OpenAI key, Ollama server, or paid AI backend is required.
 
-## V2 highlights
+## V3 highlights
 
-- **Auto performance mode** that adapts to the browser/device
-- Turbo, Balanced, and Smart manual modes
-- WebGPU acceleration when available
-- CPU/WASM fallback when WebGPU is unavailable
-- Live streamed responses
-- Command queuing while the local model boots
-- Smarter memory retrieval that selects memories relevant to the current question
-- First-text and total-response latency telemetry
-- Device tier detection: Light, Standard, or Performance
-- Auto Boot option
-- Local chat history
-- User-controlled local memories
-- Shows how many memories were used for the last reply
-- Voice input when browser speech recognition is supported
-- Spoken J.A.R.V.I.S. replies
-- One-click copy for assistant responses
-- Quick prompt cards
-- Animated reactor HUD
-- Static hosting support for Netlify, Vercel, GitHub Pages, and similar hosts
+- Three local model tiers: Lite, Standard, and Power
+- Automatic device-aware model choice
+- Turbo, Balanced, Smart, and Auto inference modes
+- WebGPU acceleration with CPU/WASM fallback
+- Live token streaming and real Stop generation
+- Multiple local chat sessions
+- Edit/resend, regenerate, and copy controls
+- User-approved local text/code file chat
+- Relevant-file excerpt retrieval
+- Lightweight local vector-style memory ranking
+- Standard, Buddy, Programmer, and Study personalities
+- Voice input, spoken replies, and optional hands-free conversation
+- Built-in calculator, unit converter, timer, notes, and search launcher
+- First-token and total-response timing
+- Privacy center with export/import and local-data controls
+- Installable PWA manifest and offline app shell
+- Netlify-ready static deployment
+- No AI API key
 
-## Performance modes
+## Local models
 
-| Mode | Best for | Behavior |
+| Tier | Model | Intended use |
 | --- | --- | --- |
-| **Auto** | Most users | Picks a mode from available browser hardware |
-| **Turbo** | Fastest responses | Short context, shorter responses, deterministic generation |
-| **Balanced** | Everyday use | Medium context and response length |
-| **Smart** | Harder questions | More history, more memories, longer output |
+| **Lite** | HuggingFaceTB/SmolLM2-360M-Instruct | Phones, weak PCs, CPU fallback |
+| **Standard** | onnx-community/Qwen2.5-0.5B-Instruct | Normal devices |
+| **Power** | onnx-community/Qwen2.5-1.5B-Instruct | Strong WebGPU devices |
 
-Auto is the default.
+V3 only keeps one language model active at a time. Switching models releases the old pipeline before loading the new one.
+
+The Power model is substantially larger than the others and can require a large browser download and more memory.
+
+## Auto model selection
+
+When Auto is selected:
+
+- no WebGPU → Lite
+- WebGPU on normal hardware → Standard
+- WebGPU + higher reported memory/thread count → Power
+
+You can override the choice at any time.
 
 ## AI architecture
 
 ```text
 Browser
   |
-  +-- React V2 HUD
+  +-- React V3 HUD
   |
-  +-- AI Web Worker
+  +-- Local session + memory + file state
+  |
+  +-- Dedicated AI Web Worker
         |
         +-- Transformers.js
               |
-              +-- Qwen2.5-0.5B-Instruct (Q4)
+              +-- Lite / Standard / Power model
               |
               +-- WebGPU
               |     or
-              +-- WASM / CPU fallback
+              +-- WASM / CPU
 ```
 
-## Smarter memory
+## Stop generation
 
-V2 does not blindly send every saved memory to the model.
+V3 uses Transformers.js interruptible stopping criteria.
 
-For each prompt it:
+Press Stop while a response is being generated and the local model stops on its next generation step. The partial answer remains visible and is marked as stopped.
 
-1. extracts useful keywords from the current question,
-2. compares them with saved memories,
-3. ranks memories by relevance and recency,
-4. sends only the best matches for the selected performance mode.
+## Memory engine
 
-This keeps the prompt smaller and reduces irrelevant context.
+V3 stores memories locally in browser storage.
 
-## Model
+For each request it converts the current question and memories into lightweight local hashed text vectors, ranks saved memories by similarity and recency, and sends only the most relevant memories to the model.
+
+This is intentionally lightweight and requires no second embedding-model download.
+
+## Local file chat
+
+Use **Add local files** to attach supported text/code documents.
+
+Supported formats include TXT, Markdown, JSON, CSV, JavaScript, TypeScript, JSX/TSX, Python, HTML/CSS, XML, and YAML.
+
+Limits:
+
+- up to 5 attached files
+- up to 300 KB per file
+- text/code formats only
+
+Files are read only after explicit user selection. V3 splits files into chunks, ranks chunks against the current question, and sends only the most relevant excerpts to the local language model.
+
+Attached file contents are kept in current page memory rather than automatically written to long-term J.A.R.V.I.S. storage.
+
+## Chat sessions
+
+V3 supports multiple local sessions. You can create, switch, delete, or clear sessions; edit an older user message and resend it; regenerate a response; and copy assistant output.
+
+Up to 30 sessions are retained in local browser storage.
+
+## Personalities
+
+- **Standard** — calm and efficient
+- **Buddy** — friendly and relaxed
+- **Programmer** — technical and debugging-focused
+- **Study** — explanation/teaching focused
+
+Personality settings are separate from saved factual memories.
+
+## Built-in local tools
 
 ```text
-onnx-community/Qwen2.5-0.5B-Instruct
-dtype: q4
+/calc 12 * (3 + 4)
+/convert 5 km to mi
+/convert 10 kg to lb
+/convert 30 c to f
+/timer 30s
+/timer 5m
+/note Remember this
+/search your query
+/youtube
+/github
+/clear
+/load
 ```
 
-The local model and memory-selection logic live in:
+Calculator input is restricted to numeric arithmetic characters/operators.
 
-```text
-src/ai.worker.ts
-```
+## Voice
 
-## First load
+V3 supports browser speech recognition when available and browser speech synthesis for spoken replies.
 
-The first time J.A.R.V.I.S. starts, the browser downloads the local model files.
+Hands-free mode can automatically reopen listening after J.A.R.V.I.S. finishes speaking. Browser voice support varies by device/browser.
 
-Afterward, the browser can reuse cached model files.
+## Privacy Center
 
-A current Chromium-based browser with WebGPU support will usually give the best experience.
+The Privacy Center can export sessions, memories, and settings; import a V3 backup; clear accessible app caches; clear local J.A.R.V.I.S. data; and show counts for sessions, memories, and attached files.
+
+Model files are managed by browser/model caching systems. Some model storage may require the browser's own site-data controls to fully remove.
+
+## PWA / install
+
+V3 includes `manifest.webmanifest`, standalone display metadata, and `public/sw.js` for the app shell.
+
+The service worker caches same-origin app resources. It does not bundle the large AI model into the application package.
 
 ## Run locally
 
-Because the repository name ends in a period, clone into a Windows-safe local folder:
+The GitHub repository name ends in a period, so on Windows clone it into a safe directory name:
 
 ```powershell
 git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-web
@@ -114,34 +174,15 @@ dist/
 
 ## Netlify
 
-The repo includes `netlify.toml`.
-
 - Build command: `npm run build`
 - Publish directory: `dist`
 - AI API environment variables: **none**
 
-## Commands
-
-- `/load` — initialize the local AI core
-- `/clear` — clear the conversation
-- `/new` — start a new session
-- `/youtube` — open YouTube
-- `/github` — open the repository
-- `/search your query` — open a browser search
-
-## Privacy
-
-AI inference happens locally in the browser.
-
-Chat history and user-approved memories are stored in browser storage. Model files are fetched from their model host if they are not already cached.
-
-Prompts do not need to be sent to Gemini, OpenAI, Claude, or another hosted LLM API for J.A.R.V.I.S. to answer.
-
 ## Browser limitations
 
-A normal website cannot silently run PowerShell, launch arbitrary Windows programs, inspect arbitrary local files, or take unrestricted control of the computer.
+A normal web app cannot silently run arbitrary PowerShell/CMD, launch arbitrary native programs, inspect arbitrary local files without selection, control the operating system, or secretly access camera/microphone/accounts.
 
-That restriction is intentional browser security.
+Those restrictions are intentional browser security.
 
 ## Project structure
 
@@ -149,7 +190,8 @@ That restriction is intentional browser security.
 J.A.R.V.I.S.
 ├─ public/
 │  ├─ jarvis.svg
-│  └─ manifest.webmanifest
+│  ├─ manifest.webmanifest
+│  └─ sw.js
 ├─ src/
 │  ├─ ai.worker.ts
 │  ├─ App.tsx
@@ -163,16 +205,16 @@ J.A.R.V.I.S.
 └─ vite.config.ts
 ```
 
-## Next upgrades
+## Future V3.x upgrades
 
-- Multiple local models
-- Ultra-light phone model
-- User-approved local file chat
-- Semantic vector memory
-- Local speech recognition
-- Better PWA offline support
-- Browser tool permission center
-- Smarter automatic model selection
+- real embedding-model semantic memory
+- fully local Whisper-style speech recognition
+- richer agent/task timeline with step approvals
+- browser permission dashboard
+- optional user-approved URL ingestion
+- model-cache management with exact per-model storage
+- local RAG indexes for larger document sets
+- richer Markdown/code rendering
 
 ## License
 
