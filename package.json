@@ -1,8 +1,8 @@
 {
   "name": "jarvis-web-ai",
-  "version": "4.1.0",
+  "version": "5.0.0",
   "private": true,
-  "description": "J.A.R.V.I.S. V4.1 Cloud: fast remote keyless AI web app with agent planning, memory/file retrieval, tools, voice and no client-side LLM inference.",
+  "description": "J.A.R.V.I.S. V5 Cloud: responsive remote AI assistant with model routing, failover, live web research, agent planning, memory/file retrieval, voice and tools.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
