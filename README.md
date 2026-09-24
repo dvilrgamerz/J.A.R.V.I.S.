@@ -1,56 +1,77 @@
-# J.A.R.V.I.S. Web AI V4.1 Cloud
+# J.A.R.V.I.S. Web AI V5 Cloud
 
-J.A.R.V.I.S. V4.1 is a fast web AI assistant designed so the **language model does not run on the user's phone or laptop**.
+J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
 
-The browser is now a thin client. Heavy AI inference runs remotely through Puter.js instead of Transformers/WebGPU on the user's device.
+## V5 upgrades
 
-## Why V4.1 Cloud
+- vertical up/down layout on phone and PC
+- no page-level sideways scrolling
+- sticky chat composer
+- Jump to Top and Jump to Latest controls
+- auto-follow new replies until the user manually scrolls upward
+- remote model routing
+- automatic fallback when a preferred remote model route fails
+- optional **Research mode** for current web answers
+- streamed normal chat responses
+- V5 service-worker cache version to replace older V4 assets
+- all V4 Agent, memory, file, voice, privacy, and tool features remain
 
-The old local-browser architecture could download hundreds of MB or more of model files and use significant CPU/GPU/RAM.
+## Remote routing
 
-V4.1 removes that local LLM runtime entirely.
+V5 asks Puter for the currently available AI model catalogue.
 
-Users now get:
+The router prefers fast GPT-5.6 routes for normal use and can prefer a stronger GPT-5.6 Sol route in Smart mode if Puter exposes one. If a preferred route fails before producing an answer, V5 tries another compatible remote route.
 
-- no local LLM download
-- no local WebGPU inference
-- no large AI model in device RAM
-- much lower CPU/GPU load
-- faster time-to-first-use
-- streamed remote responses
-- the existing J.A.R.V.I.S. UI, sessions, memory, files, tools, voice, and Agent Workspace
+The app still contains **no local LLM runtime**.
 
-## Remote AI
+## Research mode
 
-V4.1 uses Puter.js remote AI with GPT-5.6 Luna as the current fast model route.
+Turn **Research** on in the quick tools bar when you need current information.
 
-The site itself does **not** require a developer API key.
+V5 uses Puter's OpenAI-compatible web-search tool with GPT-5.6 Luna. Research answers are instructed to include useful source links and separate current web findings from general model knowledge.
 
-Puter uses a user-pays model: users may need to authenticate with Puter and their Puter account is responsible for AI usage/costs and provider limits.
+Research mode can take longer than normal chat because it performs live search.
 
-## What still runs in the browser
+## Phone + PC scrolling
 
-Only lightweight work remains client-side:
+V5 is designed around vertical scrolling:
 
-- React UI
-- chat/session storage
-- local memory ranking
-- small text-vector calculations
-- selecting relevant file excerpts
-- browser speech recognition/synthesis
-- calculator/converter/timer tools
-- permissions and privacy controls
-- PWA shell
+- phone layout stacks sections vertically
+- PC main workspace scrolls up/down
+- page-level horizontal overflow is blocked
+- controls wrap instead of pushing the page sideways
+- chat has its own vertical scroll area
+- composer stays reachable near the bottom
+- Jump to Top and Jump to Latest buttons are available
+- automatic follow stops if the user scrolls upward
 
-The actual language-model inference is remote.
+Code blocks and wide Markdown tables may still scroll horizontally **inside their own content box** so they stay readable without moving the entire app sideways.
 
-## V4 Agent Workspace
+## Cloud architecture
 
-Agent Workspace remains approval-based.
+```text
+Phone / PC
+  |
+  +-- Lightweight React UI
+  |     +-- chat sessions
+  |     +-- memory ranking
+  |     +-- file excerpt selection
+  |     +-- voice + local tools
+  |
+  +-- Puter.js
+        |
+        +-- Model router / failover
+        |
+        +-- Remote AI GPU inference
+        |
+        +-- Optional live web search
+```
 
-J.A.R.V.I.S. can generate a step plan for a goal, but it does not silently control the operating system or execute arbitrary native actions.
+No Transformers.js model or WebGPU LLM worker is included.
 
-Each step can be:
+## Agent Workspace
+
+The V5 Agent Workspace remains approval-based:
 
 - Start
 - Ask JARVIS
@@ -58,63 +79,37 @@ Each step can be:
 - Skip
 - Reopen
 
+Plans use the same remote routing/fallback system.
+
 ## Response modes
 
-The existing profiles now control **remote response behavior**, not local hardware load:
+- **Auto** — automatic remote route
+- **Turbo** — shortest/faster output
+- **Balanced** — everyday use
+- **Smart** — larger context/deeper output and stronger route when available
 
-- **Fast Cloud** — shortest/faster replies
-- **Balanced Cloud** — normal everyday answers
-- **Smart Cloud** — more context and deeper answers
-- **Auto Cloud** — defaults toward speed
+These settings affect remote inference behavior, not device AI load.
 
-All profiles use remote inference.
+## Memory + files
 
-## Rich responses
+J.A.R.V.I.S. can locally rank saved memories and user-selected text/code file excerpts before including relevant context in the remote prompt.
 
-Assistant replies support Markdown:
-
-- headings
-- lists
-- tables
-- links
-- quotes
-- inline code
-- fenced code blocks
-
-## Memory + file context
-
-Memories and user-selected text/code files are still filtered locally before being sent as context.
-
-Only relevant memory/file excerpts are added to a prompt.
-
-Supported local file types include TXT, Markdown, JSON, CSV, JS/TS, JSX/TSX, Python, HTML/CSS, XML, and YAML.
+Supported text/code files include TXT, Markdown, JSON, CSV, JS/TS, JSX/TSX, Python, HTML/CSS, XML, and YAML.
 
 Current limits:
 
 - up to 5 attached files
 - up to 300 KB each
-- text/code files only
 
-## Privacy note
+## Privacy
 
-Moving AI inference to remote infrastructure means prompts and selected context sent for an AI answer leave the device and are processed through Puter/provider infrastructure.
+The LLM runs remotely. Prompts and selected memory/file excerpts included in an AI request can leave the device and be processed by Puter/provider infrastructure.
 
-Do not store passwords, private keys, authentication tokens, or other secrets in J.A.R.V.I.S. memory or prompts.
+Do not send passwords, private keys, auth tokens, or other secrets.
 
-## Permissions Center
-
-V4 keeps app-level controls for:
-
-- microphone
-- local files
-- clipboard
-- timer notifications
-
-Browser permission prompts still apply.
+Research mode additionally sends the request through the remote AI web-search workflow.
 
 ## Built-in local tools
-
-These do not need AI inference:
 
 ```text
 /calc 12 * (3 + 4)
@@ -131,66 +126,24 @@ These do not need AI inference:
 /load
 ```
 
-## Architecture
-
-```text
-Phone / Laptop Browser
-  |
-  +-- Lightweight J.A.R.V.I.S. UI
-  |     +-- sessions
-  |     +-- local memory ranking
-  |     +-- file excerpt selection
-  |     +-- voice + tools
-  |
-  +-- Puter.js
-        |
-        +-- Remote AI provider
-              |
-              +-- heavy model inference on remote GPUs
-```
-
-There is no Transformers.js LLM worker in V4.1.
-
-## Run locally
-
-The GitHub repo name ends in a period, so on Windows clone it into a safe folder:
-
-```powershell
-git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-web
-cd jarvis-web
-npm install
-npm run dev
-```
-
 ## Build
 
 ```powershell
+npm install
 npm run build
 ```
 
-Output:
+Output: `dist/`
 
-```text
-dist/
-```
+## Hosting
 
-## Netlify
+Static hosting works with Netlify/Vercel-style platforms.
 
 - build command: `npm run build`
 - publish directory: `dist`
 - developer AI API key: **none**
 
-The frontend loads Puter.js at runtime for remote AI.
-
-## Browser limitations
-
-A web app still cannot silently:
-
-- run arbitrary PowerShell or CMD
-- launch arbitrary native applications
-- inspect arbitrary local files without selection
-- take unrestricted operating-system control
-- secretly access microphone, clipboard, camera, or accounts
+The frontend loads Puter.js at runtime.
 
 ## License
 
