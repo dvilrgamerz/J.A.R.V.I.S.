@@ -21,7 +21,7 @@ import {
   Globe2,
   HardDrive,
   Heart,
-  Install,
+
   MemoryStick,
   Mic,
   MicOff,
