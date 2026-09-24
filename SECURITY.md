@@ -1,23 +1,29 @@
 # Security Policy
 
-## Secrets
+## No AI secrets required
 
-Never commit `.env`, API keys, tokens, passwords, cookies, or private certificates.
+J.A.R.V.I.S. Web AI does not require a Gemini, OpenAI, Anthropic, or other hosted-LLM API key.
 
-## Desktop permissions
+Do not add secret API keys to client-side code. Anything shipped to a browser can be inspected by the user.
 
-J.A.R.V.I.S. intentionally uses an allowlist for desktop app launching. Do not replace it with unvalidated `exec`, `spawn`, PowerShell, CMD, or shell input from the AI or renderer.
+## Browser permissions
 
-## Electron
+Keep browser capabilities explicit and user initiated.
 
-Keep:
+Do not attempt to bypass browser security controls to access arbitrary files, execute shell commands, inspect other tabs, or control the operating system.
 
-- `contextIsolation: true`
-- `nodeIntegration: false`
-- a narrow preload bridge
+## Local storage
 
-Validate all IPC input in the Electron main process.
+Chat history and saved memories are stored in browser localStorage. Avoid storing passwords, authentication tokens, private keys, or other secrets as J.A.R.V.I.S. memories.
+
+## External links
+
+Open external destinations using safe new-tab behavior with `noopener,noreferrer`.
+
+## Dependencies
+
+Keep Transformers.js, Vite, React, and related dependencies updated and review security advisories before releases.
 
 ## Reporting
 
-If you find a security problem, avoid posting secrets or exploit details in a public issue. Rotate any exposed credentials immediately.
+If you find a security problem, avoid posting credentials or private exploit details in a public issue.
