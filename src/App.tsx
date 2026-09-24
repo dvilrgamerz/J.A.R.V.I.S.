@@ -9,6 +9,8 @@ import {
 import MarkdownMessage from "./MarkdownMessage";
 import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat } from "./remoteAI";
 import {
+  ArrowDown,
+  ArrowUp,
   BookOpen,
   BrainCircuit,
   Check,
@@ -171,10 +173,10 @@ const QUICK_PROMPTS = [
 ];
 
 const starterMessage: Message = {
-  id: "welcome-v4",
+  id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V4 Cloud online. AI inference runs remotely, so your phone or laptop does not download or run the language model.",
+    "J.A.R.V.I.S. V5 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
   createdAt: Date.now()
 };
 
@@ -206,6 +208,7 @@ function migrateLegacyMessages(messages: Message[]) {
     const legacyWelcome =
       message.id === "welcome" ||
       message.id === "welcome-v3" ||
+      message.id === "welcome-v4" ||
       text.includes("local browser model") ||
       text.includes("activate the ai core") ||
       text.includes("web core online");
@@ -377,6 +380,11 @@ function App() {
   const [agentRequestId, setAgentRequestId] = useState<string | null>(null);
   const [tokensPerSecond, setTokensPerSecond] = useState<number | undefined>();
   const [estimatedTokens, setEstimatedTokens] = useState<number | undefined>();
+  const [researchMode, setResearchMode] = useState<boolean>(() =>
+    readStored<boolean>("jarvis.research.v5", false)
+  );
+  const [modelUsed, setModelUsed] = useState("Remote router");
+  const [userScrolledAway, setUserScrolledAway] = useState(false);
   const [permissions, setPermissions] = useState<PermissionState>(() =>
     readStored<PermissionState>("jarvis.permissions.v4", {
       microphone: true,
@@ -388,6 +396,7 @@ function App() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   const endRef = useRef<HTMLDivElement | null>(null);
+  const chatStreamRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const stopRequestedRef = useRef(false);
@@ -495,6 +504,10 @@ function App() {
   }, [permissions]);
 
   useEffect(() => {
+    localStorage.setItem("jarvis.research.v5", JSON.stringify(researchMode));
+  }, [researchMode]);
+
+  useEffect(() => {
     if (agentPlan) {
       localStorage.setItem("jarvis.agent.v4", JSON.stringify(agentPlan));
     } else {
@@ -503,8 +516,10 @@ function App() {
   }, [agentPlan]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!userScrolledAway) {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages, userScrolledAway]);
 
 
   useEffect(() => {
@@ -558,6 +573,28 @@ function App() {
     if (modelState === "error") return "ERROR";
     return "STANDBY";
   }, [busy, stopping, modelState]);
+
+  function handleChatScroll() {
+    const element = chatStreamRef.current;
+    if (!element) return;
+
+    const distanceFromBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight;
+
+    setUserScrolledAway(distanceFromBottom > 90);
+  }
+
+  function jumpToLatest() {
+    setUserScrolledAway(false);
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }
+
+  function jumpToTop() {
+    const element = chatStreamRef.current;
+    if (!element) return;
+    setUserScrolledAway(true);
+    element.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function speak(text: string) {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
@@ -969,7 +1006,7 @@ function App() {
     };
 
     const history = [...baseMessages, userMessage]
-      .filter((message) => message.id !== "welcome-v4" && !message.streaming)
+      .filter((message) => message.id !== "welcome-v5" && !message.streaming)
       .slice(-24)
       .map(({ role, content }) => ({ role, content }));
 
@@ -991,7 +1028,9 @@ function App() {
         memories,
         files: files.map(({ name, text }) => ({ name, text })),
         mode: resolvedMode,
+        profile: resolvedModel,
         personality,
+        research: researchMode,
         shouldStop: () => stopRequestedRef.current,
         onToken: (token, firstMs) => {
           if (firstMs) setFirstChunkMs(firstMs);
@@ -1028,6 +1067,8 @@ function App() {
       setFileChunksUsed(result.fileChunksUsed);
       setEstimatedTokens(result.estimatedTokens);
       setTokensPerSecond(result.tokensPerSecond);
+      setModelUsed(result.modelUsed);
+      setBackend(result.researchUsed ? "WEB + REMOTE" : "REMOTE");
 
       if (!result.stopped) {
         speak(result.answer);
@@ -1154,6 +1195,7 @@ function App() {
         autoBoot,
         voiceEnabled,
         voiceConversation,
+        researchMode,
         permissions
       },
       agentPlan
@@ -1184,6 +1226,10 @@ function App() {
 
       if (Array.isArray(parsed.memories)) {
         setMemories(parsed.memories.slice(-40));
+      }
+
+      if (typeof parsed.settings?.researchMode === "boolean") {
+        setResearchMode(parsed.settings.researchMode);
       }
 
       if (parsed.settings?.permissions) {
@@ -1246,7 +1292,8 @@ function App() {
       "jarvis.autoboot",
       "jarvis.messages",
       "jarvis.permissions.v4",
-      "jarvis.agent.v4"
+      "jarvis.agent.v4",
+      "jarvis.research.v5"
     ].forEach((key) => localStorage.removeItem(key));
 
     setPrivacyOpen(false);
@@ -1275,7 +1322,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V4</p>
+            <p>CLOUD INTELLIGENCE · V5</p>
           </div>
         </div>
 
@@ -1424,7 +1471,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">AGENTIC REMOTE INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V4</em>
+              J.A.R.V.I.S. <em>V5</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
           </div>
@@ -1610,8 +1657,8 @@ function App() {
 
         <div className="cloud-ready-banner">
           <div>
-            <strong>V4.1 CLOUD AI READY</strong>
-            <span>No local model download · no WebGPU inference · {REMOTE_MODEL_NAME}</span>
+            <strong>V5 CLOUD AI READY</strong>
+            <span>No local model download · remote routing + failover · {REMOTE_MODEL_NAME}</span>
           </div>
           <span className="cloud-ready-dot" />
         </div>
@@ -1671,6 +1718,14 @@ function App() {
           <button onClick={clearActiveChat} disabled={busy}>
             <Trash2 size={15} /> Clear Session
           </button>
+          <button
+            className={researchMode ? "research-active" : ""}
+            onClick={() => setResearchMode((value) => !value)}
+            disabled={busy}
+            title="Use live web search for current answers"
+          >
+            <Globe2 size={15} /> {researchMode ? "Research ON" : "Research"}
+          </button>
           <button onClick={() => openExternal("https://www.google.com")}>
             <Search size={15} /> Search
           </button>
@@ -1682,7 +1737,7 @@ function App() {
         <section className="chat-card v3-chat v4-chat">
           <div className="chat-glow" />
 
-          <div className="chat-stream">
+          <div className="chat-stream" ref={chatStreamRef} onScroll={handleChatScroll}>
             {messages.map((message) => (
               <article
                 className={`message-row ${message.role} ${message.streaming ? "streaming" : ""}`}
@@ -1717,7 +1772,7 @@ function App() {
                       )}
 
                       {message.role === "assistant" &&
-                        message.id !== "welcome-v4" &&
+                        message.id !== "welcome-v5" &&
                         !message.streaming && (
                           <>
                             <button onClick={() => regenerate(message.id)} title="Regenerate">
@@ -1748,6 +1803,19 @@ function App() {
             ))}
 
             <div ref={endRef} />
+          </div>
+
+          <div className="scroll-controls" aria-label="Chat scroll controls">
+            <button onClick={jumpToTop} title="Jump to top">
+              <ArrowUp size={16} />
+            </button>
+            <button
+              className={userScrolledAway ? "attention" : ""}
+              onClick={jumpToLatest}
+              title="Jump to latest"
+            >
+              <ArrowDown size={16} />
+            </button>
           </div>
 
           <div className="composer-zone">
@@ -1814,7 +1882,9 @@ function App() {
               <i />
               <span>{PERSONALITY_INFO[personality].label.toUpperCase()}</span>
               <i />
-              <span>{backend}</span>
+              <span>{researchMode ? "RESEARCH" : backend}</span>
+              <i />
+              <span title={modelUsed}>{modelUsed.toUpperCase().slice(0, 28)}</span>
               <i />
               <span>{estimatedTokens ? `~${estimatedTokens} TOKENS` : "TOKEN ESTIMATE —"}</span>
               <i />
@@ -1829,14 +1899,14 @@ function App() {
           <section className="agent-modal" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <span>V4 APPROVAL-BASED WORKFLOW</span>
+                <span>V5 APPROVAL-BASED WORKFLOW</span>
                 <h3>Agent Workspace</h3>
               </div>
               <button onClick={() => setAgentOpen(false)}><X size={18} /></button>
             </header>
 
             <p>
-              J.A.R.V.I.S. can plan a goal, but V4 does not silently execute browser or system actions. You approve and track every step.
+              J.A.R.V.I.S. can plan a goal, but V5 does not silently execute browser or system actions. You approve and track every step.
             </p>
 
             <div className="agent-goal">
@@ -1902,7 +1972,7 @@ function App() {
           <section className="permissions-modal" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <span>V4 CAPABILITY CONTROLS</span>
+                <span>V5 CAPABILITY CONTROLS</span>
                 <h3>Permissions</h3>
               </div>
               <button onClick={() => setPermissionsOpen(false)}><X size={18} /></button>
@@ -1948,7 +2018,7 @@ function App() {
             </header>
 
             <p>
-              V4 keeps chat sessions, memories, settings, permissions, and agent-plan state in this browser. Attached files stay in the current page session and are only passed to the local model worker.
+              V5 keeps chat sessions, memories, settings, permissions, and agent-plan state in this browser. Attached files stay in the current page session and are only passed to the local model worker.
             </p>
 
             <div className="privacy-stats">
