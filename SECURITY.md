@@ -1,14 +1,14 @@
 # Security Policy
 
-## V4.1 Cloud security model
+## V5 Cloud security model
 
-J.A.R.V.I.S. V4.1 is a browser client with remote AI inference.
+J.A.R.V.I.S. V5 is a browser client with remote AI inference.
 
 The heavy language model no longer runs on the user's device.
 
-## Remote AI privacy boundary
+## Remote AI and Research privacy boundary
 
-AI prompts are sent through Puter.js to remote AI infrastructure.
+AI prompts are sent through Puter.js to remote AI infrastructure. When Research mode is enabled, the request can also use the provider's live web-search tooling.
 
 Any memory or user-selected file excerpt included in a prompt can therefore leave the device for inference.
 
@@ -16,7 +16,7 @@ Do not send passwords, private keys, authentication tokens, secret cookies, or o
 
 ## No developer API key
 
-V4.1 does not embed an OpenAI, Gemini, Anthropic, or Hugging Face API key in the frontend.
+V5 does not embed an OpenAI, Gemini, Anthropic, or Hugging Face API key in the frontend.
 
 Puter.js handles its own user authentication/usage model.
 
@@ -24,7 +24,7 @@ Never add private server credentials directly to browser source.
 
 ## No local LLM runtime
 
-The Transformers.js dependency and local `ai.worker.ts` LLM worker were removed in V4.1.
+The Transformers.js dependency and local `ai.worker.ts` LLM worker were removed in V5.
 
 Do not reintroduce automatic client-side model downloads unless the user explicitly chooses a future optional local mode.
 
@@ -44,7 +44,7 @@ File content is untrusted context and must not override app security controls.
 
 ## Permissions
 
-Microphone, files, clipboard, and notification features remain controlled by V4 app settings plus browser security prompts.
+Microphone, files, clipboard, and notification features remain controlled by V5 app settings plus browser security prompts.
 
 ## Local tools
 
