@@ -1250,8 +1250,10 @@ function App() {
         personality,
         autoBoot,
         voiceEnabled,
-        voiceConversation
-      }
+        voiceConversation,
+        permissions
+      },
+      agentPlan
     };
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -1281,6 +1283,19 @@ function App() {
         setMemories(parsed.memories.slice(-40));
       }
 
+      if (parsed.settings?.permissions) {
+        setPermissions({
+          microphone: parsed.settings.permissions.microphone !== false,
+          files: parsed.settings.permissions.files !== false,
+          clipboard: parsed.settings.permissions.clipboard !== false,
+          notifications: parsed.settings.permissions.notifications === true
+        });
+      }
+
+      if (parsed.agentPlan?.goal && Array.isArray(parsed.agentPlan.steps)) {
+        setAgentPlan(parsed.agentPlan);
+      }
+
       setNotice("J.A.R.V.I.S. V4 data imported.");
       setPrivacyOpen(false);
     } catch {
@@ -1308,6 +1323,14 @@ function App() {
     setMemories([]);
     setFiles([]);
     setInput("");
+    setAgentPlan(null);
+    setAgentGoal("");
+    setPermissions({
+      microphone: true,
+      files: true,
+      clipboard: true,
+      notifications: false
+    });
 
     [
       "jarvis.sessions.v3",
