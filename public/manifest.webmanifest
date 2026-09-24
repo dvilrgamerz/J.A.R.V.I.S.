@@ -1,17 +1,20 @@
 {
-  "name": "J.A.R.V.I.S. Web AI",
+  "name": "J.A.R.V.I.S. Web AI V3",
   "short_name": "J.A.R.V.I.S.",
-  "description": "Keyless browser-native AI assistant.",
+  "description": "Private multi-model browser AI with local memory, file chat, voice and tools.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#02070d",
   "theme_color": "#02070d",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "/jarvis.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
