@@ -6,6 +6,7 @@ import {
   useRef,
   useState
 } from "react";
+import MarkdownMessage from "./MarkdownMessage";
 import {
   BookOpen,
   BrainCircuit,
@@ -80,6 +81,20 @@ type ModelPreference = "auto" | ModelKey;
 type PerformanceMode = "turbo" | "balanced" | "smart";
 type PerformancePreference = "auto" | PerformanceMode;
 type Personality = "standard" | "buddy" | "programmer" | "study";
+type AgentStepStatus = "pending" | "active" | "done" | "skipped";
+type AgentStep = { id: string; text: string; status: AgentStepStatus };
+type AgentPlan = {
+  id: string;
+  goal: string;
+  steps: AgentStep[];
+  createdAt: number;
+};
+type PermissionState = {
+  microphone: boolean;
+  files: boolean;
+  clipboard: boolean;
+  notifications: boolean;
+};
 
 type WorkerMessage =
   | {
@@ -109,8 +124,19 @@ type WorkerMessage =
       modelKey?: ModelKey;
       memoriesUsed?: number;
       fileChunksUsed?: number;
+      estimatedTokens?: number;
+      tokensPerSecond?: number;
       stopped?: boolean;
     }
+  | {
+      type: "planResult";
+      id: string;
+      goal: string;
+      steps: string[];
+      totalMs?: number;
+      modelKey?: ModelKey;
+    }
+  | { type: "unloaded" }
   | { type: "stopping"; id?: string }
   | { type: "error"; message: string };
 
@@ -188,10 +214,10 @@ const QUICK_PROMPTS = [
 ];
 
 const starterMessage: Message = {
-  id: "welcome-v3",
+  id: "welcome-v4",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V3 online. Choose Auto and I’ll tune the local model to this device, or select Lite, Standard, or Power yourself.",
+    "J.A.R.V.I.S. V4 online. Local multi-model AI now includes Agent Workspace, richer Markdown/code replies, permissions, file retrieval, tools, voice, and memory controls.",
   createdAt: Date.now()
 };
 
@@ -359,6 +385,24 @@ function App() {
     sessionId: string;
   } | null>(null);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
+  const [agentGoal, setAgentGoal] = useState("");
+  const [agentPlan, setAgentPlan] = useState<AgentPlan | null>(() =>
+    readStored<AgentPlan | null>("jarvis.agent.v4", null)
+  );
+  const [agentPlanning, setAgentPlanning] = useState(false);
+  const [agentRequestId, setAgentRequestId] = useState<string | null>(null);
+  const [tokensPerSecond, setTokensPerSecond] = useState<number | undefined>();
+  const [estimatedTokens, setEstimatedTokens] = useState<number | undefined>();
+  const [permissions, setPermissions] = useState<PermissionState>(() =>
+    readStored<PermissionState>("jarvis.permissions.v4", {
+      microphone: true,
+      files: true,
+      clipboard: true,
+      notifications: false
+    })
+  );
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   const workerRef = useRef<Worker | null>(null);
@@ -458,6 +502,36 @@ function App() {
         return;
       }
 
+      if (data.type === "planResult") {
+        if (!agentRequestId || data.id === agentRequestId) {
+          setAgentPlan({
+            id: data.id,
+            goal: data.goal,
+            steps: data.steps.map((text) => ({
+              id: crypto.randomUUID(),
+              text,
+              status: "pending"
+            })),
+            createdAt: Date.now()
+          });
+          setAgentPlanning(false);
+          setAgentRequestId(null);
+          setAgentOpen(true);
+          setNotice("Agent plan ready. Approve each step as you work through it.");
+        }
+        return;
+      }
+
+      if (data.type === "unloaded") {
+        setLoadedModelKey(null);
+        setModelState("idle");
+        setModelProgress(0);
+        setModelStatus("AI core unloaded");
+        setBackend("—");
+        setNotice("Local model unloaded from J.A.R.V.I.S. memory.");
+        return;
+      }
+
       if (data.type === "token") {
         if (data.firstChunkMs) setFirstChunkMs(data.firstChunkMs);
         const sessionId = pendingSessionsRef.current[data.id];
@@ -510,6 +584,8 @@ function App() {
         setTotalMs(data.totalMs || undefined);
         setMemoriesUsed(data.memoriesUsed || 0);
         setFileChunksUsed(data.fileChunksUsed || 0);
+        setEstimatedTokens(data.estimatedTokens || undefined);
+        setTokensPerSecond(data.tokensPerSecond || undefined);
         setBusy(false);
         setStopping(false);
 
@@ -572,6 +648,18 @@ function App() {
   useEffect(() => {
     localStorage.setItem("jarvis.autoboot", JSON.stringify(autoBoot));
   }, [autoBoot]);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.permissions.v4", JSON.stringify(permissions));
+  }, [permissions]);
+
+  useEffect(() => {
+    if (agentPlan) {
+      localStorage.setItem("jarvis.agent.v4", JSON.stringify(agentPlan));
+    } else {
+      localStorage.removeItem("jarvis.agent.v4");
+    }
+  }, [agentPlan]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -654,6 +742,63 @@ function App() {
     window.speechSynthesis.speak(utterance);
   }
 
+  function unloadModel() {
+    if (busy || agentPlanning || !workerRef.current) return;
+    workerRef.current.postMessage({ type: "unload" });
+  }
+
+  function createAgentPlan() {
+    const goal = agentGoal.trim();
+    if (!goal || busy || agentPlanning || !workerRef.current) return;
+
+    const id = crypto.randomUUID();
+    setAgentPlanning(true);
+    setAgentRequestId(id);
+    setNotice("J.A.R.V.I.S. is building an approval-based task plan…");
+
+    workerRef.current.postMessage({
+      type: "plan",
+      id,
+      modelKey: resolvedModel,
+      goal,
+      mode: resolvedMode,
+      personality
+    });
+  }
+
+  function updateAgentStep(stepId: string, status: AgentStepStatus) {
+    setAgentPlan((current) =>
+      current
+        ? {
+            ...current,
+            steps: current.steps.map((step) =>
+              step.id === stepId ? { ...step, status } : step
+            )
+          }
+        : current
+    );
+  }
+
+  function askAboutAgentStep(step: AgentStep) {
+    setAgentOpen(false);
+    void sendMessage(
+      `Help me complete this approved task step: ${step.text}\n\nGive me the practical next actions only.`
+    );
+  }
+
+  async function setPermission(
+    key: keyof PermissionState,
+    enabled: boolean
+  ) {
+    if (key === "notifications" && enabled && "Notification" in window) {
+      const result = await Notification.requestPermission();
+      enabled = result === "granted";
+      if (!enabled) setNotice("Browser notification permission was not granted.");
+    }
+
+    setPermissions((current) => ({ ...current, [key]: enabled }));
+  }
+
   function loadModel(target: ModelKey = resolvedModel, force = false) {
     if (!workerRef.current) return;
     if (!force && modelState === "loading") return;
@@ -715,6 +860,10 @@ function App() {
   }
 
   async function copyMessage(message: Message) {
+    if (!permissions.clipboard) {
+      setNotice("Clipboard access is disabled in V4 Permissions.");
+      return;
+    }
     if (!message.content.trim()) return;
 
     try {
@@ -758,6 +907,12 @@ function App() {
   }
 
   async function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
+    if (!permissions.files) {
+      setNotice("Local file access is disabled in V4 Permissions.");
+      event.target.value = "";
+      return;
+    }
+
     const selected = Array.from(event.target.files || []);
 
     if (!selected.length) return;
@@ -792,7 +947,7 @@ function App() {
       }
 
       if (file.size > 300_000) {
-        setNotice(`${file.name} is over the 300 KB V3 file limit.`);
+        setNotice(`${file.name} is over the 300 KB V4 file limit.`);
         continue;
       }
 
@@ -809,7 +964,7 @@ function App() {
 
     setFiles((current) => [...current, ...nextFiles].slice(0, 5));
     if (nextFiles.length) {
-      setNotice(`${nextFiles.length} local file${nextFiles.length === 1 ? "" : "s"} attached. V3 will retrieve relevant excerpts only.`);
+      setNotice(`${nextFiles.length} local file${nextFiles.length === 1 ? "" : "s"} attached. V4 will retrieve relevant excerpts only.`);
     }
 
     event.target.value = "";
@@ -898,6 +1053,15 @@ function App() {
 
       window.setTimeout(() => {
         addLocalAssistant(sessionId, `Timer finished: ${amount}${match[2]}.`);
+        if (
+          permissions.notifications &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          new Notification("J.A.R.V.I.S. V4 Timer", {
+            body: `Timer finished: ${amount}${match[2]}.`
+          });
+        }
       }, seconds * 1000);
 
       return true;
@@ -1025,6 +1189,11 @@ function App() {
   }
 
   function startListening() {
+    if (!permissions.microphone) {
+      setNotice("Microphone access is disabled in V4 Permissions.");
+      return;
+    }
+
     const SpeechRecognitionCtor =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -1071,7 +1240,7 @@ function App() {
 
   function exportData() {
     const payload = {
-      version: 3,
+      version: 4,
       exportedAt: new Date().toISOString(),
       sessions,
       memories,
@@ -1091,7 +1260,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "jarvis-v3-backup.json";
+    anchor.download = "jarvis-v4-backup.json";
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -1112,7 +1281,7 @@ function App() {
         setMemories(parsed.memories.slice(-40));
       }
 
-      setNotice("J.A.R.V.I.S. data imported.");
+      setNotice("J.A.R.V.I.S. V4 data imported.");
       setPrivacyOpen(false);
     } catch {
       setNotice("That backup file could not be imported.");
@@ -1148,7 +1317,9 @@ function App() {
       "jarvis.mode.v3",
       "jarvis.personality.v3",
       "jarvis.autoboot",
-      "jarvis.messages"
+      "jarvis.messages",
+      "jarvis.permissions.v4",
+      "jarvis.agent.v4"
     ].forEach((key) => localStorage.removeItem(key));
 
     setPrivacyOpen(false);
@@ -1166,7 +1337,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell v3-shell ${busy ? "is-thinking" : ""}`}>
+    <div className={`app-shell v3-shell v4-shell ${busy ? "is-thinking" : ""}`}>
       <div className="scanlines" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
@@ -1177,7 +1348,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>LOCAL INTELLIGENCE · V3</p>
+            <p>LOCAL INTELLIGENCE · V4</p>
           </div>
         </div>
 
@@ -1323,14 +1494,14 @@ function App() {
         </div>
       </aside>
 
-      <main className="main-panel v3-main">
+      <main className="main-panel v3-main v4-main">
         <header className="topbar">
           <div className="hero-copy">
-            <span className="eyebrow">MULTI-MODEL LOCAL ASSISTANT</span>
+            <span className="eyebrow">AGENTIC LOCAL INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V3</em>
+              J.A.R.V.I.S. <em>V4</em>
             </h2>
-            <p>Models · memory · files · tools · voice · sessions</p>
+            <p>Agent workspace · models · memory · files · tools · permissions</p>
           </div>
 
           <div className="top-actions">
@@ -1353,6 +1524,22 @@ function App() {
               title={voiceEnabled ? "Disable spoken replies" : "Enable spoken replies"}
             >
               {voiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            </button>
+
+            <button
+              className={`icon-button ${agentOpen ? "active" : ""}`}
+              onClick={() => setAgentOpen(true)}
+              title="Agent Workspace"
+            >
+              <WandSparkles size={18} />
+            </button>
+
+            <button
+              className={`icon-button ${permissionsOpen ? "active" : ""}`}
+              onClick={() => setPermissionsOpen(true)}
+              title="Permissions"
+            >
+              <SlidersHorizontal size={18} />
             </button>
 
             <button className="icon-button" onClick={installApp} title="Install web app">
@@ -1408,6 +1595,7 @@ function App() {
             <span><BrainCircuit size={12} /> {memories.length} memories</span>
             <span><FileText size={12} /> {files.length} files</span>
             <span><SlidersHorizontal size={12} /> {PERSONALITY_INFO[personality].label}</span>
+            <span><Zap size={12} /> {tokensPerSecond ? `${tokensPerSecond} tok/s` : "— tok/s"}</span>
           </div>
         </section>
 
@@ -1592,9 +1780,12 @@ function App() {
           <button onClick={() => openExternal("https://www.google.com")}>
             <Search size={15} /> Search
           </button>
+          <button onClick={unloadModel} disabled={busy || agentPlanning || !loadedModelKey}>
+            <X size={15} /> Unload Model
+          </button>
         </section>
 
-        <section className="chat-card v3-chat">
+        <section className="chat-card v3-chat v4-chat">
           <div className="chat-glow" />
 
           <div className="chat-stream">
@@ -1650,10 +1841,14 @@ function App() {
                     </div>
                   </div>
 
-                  <p>
-                    {message.content}
+                  <div className="rendered-message">
+                    {message.role === "assistant" ? (
+                      <MarkdownMessage content={message.content} />
+                    ) : (
+                      <p>{message.content}</p>
+                    )}
                     {message.streaming && <span className="cursor-block" />}
-                  </p>
+                  </div>
                 </div>
               </article>
             ))}
@@ -1727,11 +1922,125 @@ function App() {
               <i />
               <span>{backend}</span>
               <i />
+              <span>{estimatedTokens ? `~${estimatedTokens} TOKENS` : "TOKEN ESTIMATE —"}</span>
+              <i />
               <span>NO API KEY</span>
             </div>
           </div>
         </section>
       </main>
+
+      {agentOpen && (
+        <div className="modal-backdrop" onMouseDown={() => setAgentOpen(false)}>
+          <section className="agent-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span>V4 APPROVAL-BASED WORKFLOW</span>
+                <h3>Agent Workspace</h3>
+              </div>
+              <button onClick={() => setAgentOpen(false)}><X size={18} /></button>
+            </header>
+
+            <p>
+              J.A.R.V.I.S. can plan a goal, but V4 does not silently execute browser or system actions. You approve and track every step.
+            </p>
+
+            <div className="agent-goal">
+              <textarea
+                value={agentGoal}
+                onChange={(event) => setAgentGoal(event.target.value)}
+                placeholder="Describe a goal, e.g. Plan and build the next version of my website…"
+                rows={3}
+                maxLength={1800}
+              />
+              <button onClick={createAgentPlan} disabled={!agentGoal.trim() || busy || agentPlanning}>
+                <WandSparkles size={15} />
+                {agentPlanning ? "Planning…" : "Build Plan"}
+              </button>
+            </div>
+
+            {agentPlan && (
+              <div className="agent-plan">
+                <div className="agent-plan-head">
+                  <div>
+                    <span>ACTIVE GOAL</span>
+                    <strong>{agentPlan.goal}</strong>
+                  </div>
+                  <button onClick={() => setAgentPlan(null)}>Reset</button>
+                </div>
+
+                <div className="agent-step-list">
+                  {agentPlan.steps.map((step, index) => (
+                    <article className={`agent-step ${step.status}`} key={step.id}>
+                      <div className="agent-step-number">{index + 1}</div>
+                      <div className="agent-step-copy">
+                        <strong>{step.text}</strong>
+                        <span>{step.status.toUpperCase()}</span>
+                      </div>
+                      <div className="agent-step-actions">
+                        {step.status === "pending" && (
+                          <button onClick={() => updateAgentStep(step.id, "active")}>Start</button>
+                        )}
+                        {step.status === "active" && (
+                          <>
+                            <button onClick={() => askAboutAgentStep(step)}>Ask JARVIS</button>
+                            <button onClick={() => updateAgentStep(step.id, "done")}>Complete</button>
+                          </>
+                        )}
+                        {(step.status === "pending" || step.status === "active") && (
+                          <button onClick={() => updateAgentStep(step.id, "skipped")}>Skip</button>
+                        )}
+                        {(step.status === "done" || step.status === "skipped") && (
+                          <button onClick={() => updateAgentStep(step.id, "pending")}>Reopen</button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {permissionsOpen && (
+        <div className="modal-backdrop" onMouseDown={() => setPermissionsOpen(false)}>
+          <section className="permissions-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span>V4 CAPABILITY CONTROLS</span>
+                <h3>Permissions</h3>
+              </div>
+              <button onClick={() => setPermissionsOpen(false)}><X size={18} /></button>
+            </header>
+
+            <p>
+              These switches control what J.A.R.V.I.S. features may request or use. Browser permission prompts still apply separately.
+            </p>
+
+            <div className="permission-list">
+              {([
+                ["microphone", "Microphone", "Voice input and hands-free conversation"],
+                ["files", "Local files", "User-selected text/code file chat"],
+                ["clipboard", "Clipboard", "Copy assistant responses"],
+                ["notifications", "Notifications", "Timer-finished browser notifications"]
+              ] as const).map(([key, label, detail]) => (
+                <label className="permission-row" key={key}>
+                  <div>
+                    <strong>{label}</strong>
+                    <span>{detail}</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={permissions[key]}
+                    onChange={(event) => void setPermission(key, event.target.checked)}
+                  />
+                </label>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
 
       {privacyOpen && (
         <div className="modal-backdrop" onMouseDown={() => setPrivacyOpen(false)}>
@@ -1745,7 +2054,7 @@ function App() {
             </header>
 
             <p>
-              V3 keeps chat sessions and memories in this browser. Attached files stay in the current page session and are only passed to the local model worker.
+              V4 keeps chat sessions, memories, settings, permissions, and agent-plan state in this browser. Attached files stay in the current page session and are only passed to the local model worker.
             </p>
 
             <div className="privacy-stats">
