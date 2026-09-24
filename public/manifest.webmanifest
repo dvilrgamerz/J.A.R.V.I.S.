@@ -1,0 +1,17 @@
+{
+  "name": "J.A.R.V.I.S. Web AI",
+  "short_name": "J.A.R.V.I.S.",
+  "description": "Keyless browser-native AI assistant.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#02070d",
+  "theme_color": "#02070d",
+  "icons": [
+    {
+      "src": "/jarvis.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
