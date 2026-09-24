@@ -1,8 +1,8 @@
 {
   "name": "jarvis-web-ai",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
-  "description": "J.A.R.V.I.S. V4: a keyless local multi-model AI web app with agent planning, permissions, memory/file retrieval, tools, voice and WebGPU.",
+  "description": "J.A.R.V.I.S. V4.1 Cloud: fast remote keyless AI web app with agent planning, memory/file retrieval, tools, voice and no client-side LLM inference.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
@@ -10,7 +10,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@huggingface/transformers": "4.3.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
