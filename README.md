@@ -1,84 +1,92 @@
-# J.A.R.V.I.S. Web AI
+# J.A.R.V.I.S. Web AI V3
 
-A futuristic J.A.R.V.I.S.-inspired **AI web app with no AI API key**.
+A futuristic **keyless AI web app** inspired by J.A.R.V.I.S.
 
-The language model runs directly in the visitor's browser using Transformers.js. The default model is a 4-bit version of **Qwen2.5-0.5B-Instruct**.
+J.A.R.V.I.S. runs a quantized language model directly in the browser with Transformers.js. No Gemini key, OpenAI key, Ollama service, or AI backend is required.
 
-## What changed in v2
+## V3 highlights
 
-- Web app instead of Electron desktop app
-- No Gemini key
-- No OpenAI key
-- No Ollama
-- No AI backend server
-- Browser-native local inference
+- Live streamed responses instead of waiting for a complete answer
+- **Turbo mode** for the fastest responses
+- **Balanced mode** for everyday chat
+- **Smart mode** for longer, deeper responses
 - WebGPU acceleration when available
-- CPU/WASM fallback when WebGPU is unavailable
+- Automatic CPU/WASM fallback
+- Optional **Auto Boot** so the AI core starts loading when the site opens
+- First-text and total-response latency telemetry
+- Smaller context in Turbo mode to reduce prefill time
+- Adaptive response length by performance mode
+- Dedicated AI Web Worker so inference does not freeze the interface
 - Local chat history
 - User-controlled local memories
-- Voice input when the browser supports SpeechRecognition
-- Spoken responses with browser speech synthesis
+- Voice input when browser speech recognition is supported
+- Spoken J.A.R.V.I.S. responses
 - Model download/load progress
-- Model files can be reused from browser cache
-- Static-host friendly for Netlify, Vercel, GitHub Pages, or similar hosts
+- Browser model caching
+- Animated V3 reactor HUD with live core state, streaming cursor, status effects, and responsive controls
+- Static hosting support for Netlify, Vercel, GitHub Pages, and similar services
 
-## How it works
+## Performance modes
+
+| Mode | Best for | Behavior |
+| --- | --- | --- |
+| **Turbo** | Older PCs, fastest chat | Shorter context, deterministic output, shorter responses |
+| **Balanced** | Normal use | Medium context and response length |
+| **Smart** | Harder questions | More history, longer responses, more generation |
+
+Turbo is the default.
+
+## AI architecture
 
 ```text
 Browser
   |
-  +-- React UI
+  +-- React V3 HUD
   |
-  +-- Dedicated AI Web Worker
+  +-- AI Web Worker
         |
-        +-- Transformers.js
+        +-- Transformers.js 4.x
               |
-              +-- Qwen2.5-0.5B-Instruct (4-bit)
+              +-- Qwen2.5-0.5B-Instruct (Q4)
               |
-              +-- WebGPU when available
-              +-- WASM fallback
+              +-- WebGPU
+              |     or
+              +-- WASM / CPU fallback
 ```
 
-There is no AI API secret to configure.
+The worker uses text streaming so generated text is sent back to the React interface as it appears.
 
-## Important browser limitation
+## Model
 
-This is a web app, so J.A.R.V.I.S. cannot silently control Windows, launch File Explorer, inspect arbitrary files, or run PowerShell. Browsers intentionally block that kind of operating-system access.
+```text
+onnx-community/Qwen2.5-0.5B-Instruct
+dtype: q4
+```
 
-It can still provide AI chat, voice, local memory, browser actions, and links.
+The model configuration and generation modes live in:
+
+```text
+src/ai.worker.ts
+```
+
+## First load
+
+The first time J.A.R.V.I.S. starts, the browser has to download the model files.
+
+After the model is cached, later loads can be much faster.
+
+For best performance, use a current Chromium-based browser with WebGPU enabled.
 
 ## Run locally
 
-### 1. Clone
-
-The GitHub repository name ends with a period. Windows folder names cannot end with a period, so clone into a safe folder name:
+Because the repository name ends in a period, clone it into a Windows-safe folder name:
 
 ```powershell
 git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-web
 cd jarvis-web
-```
-
-### 2. Install
-
-```powershell
 npm install
-```
-
-### 3. Start
-
-```powershell
 npm run dev
 ```
-
-Open the localhost address shown by Vite.
-
-## First AI load
-
-Click **Activate AI**.
-
-On the first load, the browser downloads the quantized model files. This can be a large download and may take longer on a slow connection. Afterward, the browser can reuse cached model files.
-
-WebGPU is preferred for speed. If WebGPU is unavailable, J.A.R.V.I.S. automatically tries the CPU/WASM path.
 
 ## Build
 
@@ -86,41 +94,42 @@ WebGPU is preferred for speed. If WebGPU is unavailable, J.A.R.V.I.S. automatica
 npm run build
 ```
 
-The deployable site is created in:
+Output:
 
 ```text
 dist/
 ```
 
-## Deploy to Netlify
+## Netlify
 
 This repo includes `netlify.toml`.
 
-Netlify settings:
-
 - Build command: `npm run build`
 - Publish directory: `dist`
-- Environment variables: **none required**
+- AI API environment variables: **none**
 
 ## Commands
 
-- `/load` — activate/load AI
-- `/clear` — clear the chat
-- `/new` — start a new chat
+- `/load` — initialize the local AI core
+- `/clear` — clear the conversation
+- `/new` — start a new session
 - `/youtube` — open YouTube
-- `/github` — open this repository
-- `/search your query` — open a browser web search
+- `/github` — open the repository
+- `/search your query` — open a browser search
 
-## Model
+## Privacy
 
-Default:
+AI inference happens locally in the browser.
 
-```text
-onnx-community/Qwen2.5-0.5B-Instruct
-dtype: q4
-```
+Chat history and user-approved memories are stored in browser storage. The model files are fetched from their model host if they are not already cached.
 
-The model is loaded by `src/ai.worker.ts`.
+Prompts do not need to be sent to Gemini, OpenAI, Claude, or another hosted LLM API for J.A.R.V.I.S. to answer.
+
+## Browser limitations
+
+A normal website cannot silently run PowerShell, launch arbitrary Windows programs, inspect arbitrary local files, or take unrestricted control of the computer.
+
+That restriction is intentional browser security.
 
 ## Project structure
 
@@ -142,34 +151,16 @@ J.A.R.V.I.S.
 └─ vite.config.ts
 ```
 
-## Privacy
+## Next upgrades
 
-Chat messages and J.A.R.V.I.S. memories are stored locally in browser storage.
-
-The AI inference itself runs in the browser. The model files are fetched from the model host when they are not already cached.
-
-J.A.R.V.I.S. does not need to send prompts to Gemini, OpenAI, Claude, or another hosted LLM API to generate its responses.
-
-## Current limitations
-
-- Initial model download can be large.
-- Small local models are less capable than large cloud AI models.
-- WebGPU support varies by browser/device.
-- Browser voice recognition support varies.
-- This local model does not automatically have live internet knowledge.
-- Browser security prevents unrestricted desktop control.
-
-## Roadmap
-
-- Model selector
-- Smaller/faster model option for phones
-- Streaming token output
-- Fully cached PWA shell
-- Optional local Whisper speech recognition
-- Better local memory search
-- Browser permission dashboard
-- Optional user-approved file import
-- More browser tools
+- Multiple local model choices
+- Faster phone-specific model
+- User-approved local file chat
+- Better semantic memory retrieval
+- Local speech recognition
+- Installable/offline PWA shell
+- Optional browser tools
+- Smarter automatic mode selection based on device performance
 
 ## License
 
