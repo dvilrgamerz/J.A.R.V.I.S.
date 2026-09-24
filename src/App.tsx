@@ -7,6 +7,7 @@ import {
   useState
 } from "react";
 import MarkdownMessage from "./MarkdownMessage";
+import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat } from "./remoteAI";
 import {
   BookOpen,
   BrainCircuit,
@@ -96,76 +97,32 @@ type PermissionState = {
   notifications: boolean;
 };
 
-type WorkerMessage =
-  | {
-      type: "progress";
-      progress: number;
-      status: string;
-      file?: string;
-      modelKey?: ModelKey;
-      modelLabel?: string;
-    }
-  | {
-      type: "ready";
-      modelKey: ModelKey;
-      model: string;
-      label: string;
-      size: string;
-      backend: string;
-    }
-  | { type: "token"; id: string; text: string; firstChunkMs?: number }
-  | {
-      type: "result";
-      id: string;
-      answer: string;
-      totalMs?: number;
-      firstChunkMs?: number;
-      mode?: PerformanceMode;
-      modelKey?: ModelKey;
-      memoriesUsed?: number;
-      fileChunksUsed?: number;
-      estimatedTokens?: number;
-      tokensPerSecond?: number;
-      stopped?: boolean;
-    }
-  | {
-      type: "planResult";
-      id: string;
-      goal: string;
-      steps: string[];
-      totalMs?: number;
-      modelKey?: ModelKey;
-    }
-  | { type: "unloaded" }
-  | { type: "stopping"; id?: string }
-  | { type: "error"; message: string };
-
 const MODEL_INFO: Record<
   ModelPreference,
   { label: string; detail: string; estimate: string; icon: typeof Rocket }
 > = {
   auto: {
-    label: "Auto",
-    detail: "Device tuned",
-    estimate: "Adaptive",
+    label: "Auto Cloud",
+    detail: "Fast remote route",
+    estimate: "No device AI",
     icon: WandSparkles
   },
   lite: {
-    label: "Lite",
-    detail: "SmolLM2 360M",
-    estimate: "~386 MB Q4",
+    label: "Fast Cloud",
+    detail: "GPT-5.6 Luna",
+    estimate: "Remote",
     icon: Rocket
   },
   standard: {
-    label: "Standard",
-    detail: "Qwen2.5 0.5B",
-    estimate: "Balanced",
+    label: "Balanced Cloud",
+    detail: "GPT-5.6 Luna",
+    estimate: "Remote",
     icon: Gauge
   },
   power: {
-    label: "Power",
-    detail: "Qwen2.5 1.5B",
-    estimate: "~1.79 GB Q4",
+    label: "Smart Cloud",
+    detail: "GPT-5.6 Luna",
+    estimate: "Remote",
     icon: BrainCircuit
   }
 };
@@ -217,7 +174,7 @@ const starterMessage: Message = {
   id: "welcome-v4",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V4 online. Local multi-model AI now includes Agent Workspace, richer Markdown/code replies, permissions, file retrieval, tools, voice, and memory controls.",
+    "J.A.R.V.I.S. V4 Cloud online. AI inference runs remotely, so your phone or laptop does not download or run the language model.",
   createdAt: Date.now()
 };
 
@@ -266,33 +223,27 @@ function openExternal(url: string) {
 
 function resolveModel(
   preference: ModelPreference,
-  hasWebGPU: boolean,
-  cpuThreads: number,
-  deviceMemory?: number
+  _hasWebGPU: boolean,
+  _cpuThreads: number,
+  _deviceMemory?: number
 ): ModelKey {
   if (preference !== "auto") return preference;
-  if (!hasWebGPU) return "lite";
-  if ((deviceMemory ?? 0) >= 8 && cpuThreads >= 8) return "power";
-  return "standard";
+  return "lite";
 }
 
 function resolveMode(
   preference: PerformancePreference,
   modelKey: ModelKey,
-  hasWebGPU: boolean
+  _hasWebGPU: boolean
 ): PerformanceMode {
   if (preference !== "auto") return preference;
-  if (!hasWebGPU || modelKey === "lite") return "turbo";
   if (modelKey === "power") return "smart";
-  return "balanced";
+  if (modelKey === "standard") return "balanced";
+  return "turbo";
 }
 
-function deviceTier(hasWebGPU: boolean, cpuThreads: number, deviceMemory?: number) {
-  if (hasWebGPU && (deviceMemory ?? 0) >= 8 && cpuThreads >= 8) {
-    return "PERFORMANCE";
-  }
-  if (hasWebGPU && cpuThreads >= 4) return "STANDARD";
-  return "LIGHT";
+function deviceTier(_hasWebGPU: boolean, _cpuThreads: number, _deviceMemory?: number) {
+  return "THIN CLIENT";
 }
 
 function safeCalculate(expression: string) {
@@ -354,10 +305,10 @@ function App() {
   const [listening, setListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [voiceConversation, setVoiceConversation] = useState(false);
-  const [modelState, setModelState] = useState<ModelState>("idle");
-  const [modelProgress, setModelProgress] = useState(0);
-  const [modelStatus, setModelStatus] = useState("AI core not loaded");
-  const [backend, setBackend] = useState("—");
+  const [modelState, setModelState] = useState<ModelState>("ready");
+  const [modelProgress, setModelProgress] = useState(1);
+  const [modelStatus, setModelStatus] = useState("Remote AI ready");
+  const [backend, setBackend] = useState("REMOTE");
   const [loadedModelKey, setLoadedModelKey] = useState<ModelKey | null>(null);
   const [notice, setNotice] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
@@ -405,12 +356,10 @@ function App() {
   );
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
-  const workerRef = useRef<Worker | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
-  const bootedRef = useRef(false);
-  const pendingSessionsRef = useRef<Record<string, string>>({});
+  const stopRequestedRef = useRef(false);
 
   const hasWebGPU = "gpu" in navigator;
   const cpuThreads = navigator.hardwareConcurrency || 0;
@@ -476,149 +425,10 @@ function App() {
   }, [sessions, activeSessionId]);
 
   useEffect(() => {
-    const worker = new Worker(new URL("./ai.worker.ts", import.meta.url), {
-      type: "module"
-    });
-
-    workerRef.current = worker;
-
-    worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
-      const data = event.data;
-
-      if (data.type === "progress") {
-        setModelState("loading");
-        setModelProgress(data.progress || 0);
-        setModelStatus(data.status || "Loading local AI");
-        return;
-      }
-
-      if (data.type === "ready") {
-        setModelState("ready");
-        setModelProgress(1);
-        setModelStatus(`${data.label} ready`);
-        setBackend(data.backend);
-        setLoadedModelKey(data.modelKey);
-        setNotice(`${data.label} loaded on ${data.backend} · ${data.size}.`);
-        return;
-      }
-
-      if (data.type === "planResult") {
-        if (!agentRequestId || data.id === agentRequestId) {
-          setAgentPlan({
-            id: data.id,
-            goal: data.goal,
-            steps: data.steps.map((text) => ({
-              id: crypto.randomUUID(),
-              text,
-              status: "pending"
-            })),
-            createdAt: Date.now()
-          });
-          setAgentPlanning(false);
-          setAgentRequestId(null);
-          setAgentOpen(true);
-          setNotice("Agent plan ready. Approve each step as you work through it.");
-        }
-        return;
-      }
-
-      if (data.type === "unloaded") {
-        setLoadedModelKey(null);
-        setModelState("idle");
-        setModelProgress(0);
-        setModelStatus("AI core unloaded");
-        setBackend("—");
-        setNotice("Local model unloaded from J.A.R.V.I.S. memory.");
-        return;
-      }
-
-      if (data.type === "token") {
-        if (data.firstChunkMs) setFirstChunkMs(data.firstChunkMs);
-        const sessionId = pendingSessionsRef.current[data.id];
-
-        if (!sessionId) return;
-
-        const responseId = `assistant-${data.id}`;
-        updateSessionMessages(sessionId, (current) =>
-          current.map((message) =>
-            message.id === responseId
-              ? {
-                  ...message,
-                  content: message.content + data.text,
-                  streaming: true
-                }
-              : message
-          )
-        );
-        return;
-      }
-
-      if (data.type === "stopping") {
-        setStopping(true);
-        setNotice("Stopping generation…");
-        return;
-      }
-
-      if (data.type === "result") {
-        const sessionId = pendingSessionsRef.current[data.id];
-        delete pendingSessionsRef.current[data.id];
-
-        if (sessionId) {
-          const responseId = `assistant-${data.id}`;
-
-          updateSessionMessages(sessionId, (current) =>
-            current.map((message) =>
-              message.id === responseId
-                ? {
-                    ...message,
-                    content: data.answer,
-                    streaming: false,
-                    stopped: Boolean(data.stopped)
-                  }
-                : message
-            )
-          );
-        }
-
-        setFirstChunkMs(data.firstChunkMs || undefined);
-        setTotalMs(data.totalMs || undefined);
-        setMemoriesUsed(data.memoriesUsed || 0);
-        setFileChunksUsed(data.fileChunksUsed || 0);
-        setEstimatedTokens(data.estimatedTokens || undefined);
-        setTokensPerSecond(data.tokensPerSecond || undefined);
-        setBusy(false);
-        setStopping(false);
-
-        if (!data.stopped) {
-          speak(data.answer);
-        } else {
-          setNotice("Generation stopped.");
-        }
-
-        return;
-      }
-
-      if (data.type === "error") {
-        setBusy(false);
-        setStopping(false);
-        setModelState((current) => (current === "ready" ? current : "error"));
-        setModelStatus("AI core error");
-        setNotice(data.message);
-      }
-    };
-
-    worker.onerror = () => {
-      setBusy(false);
-      setStopping(false);
-      setModelState("error");
-      setModelStatus("Worker error");
-      setNotice("The local AI worker crashed. Reload the page and try again.");
-    };
-
-    return () => {
-      worker.terminate();
-      workerRef.current = null;
-    };
+    setModelState("ready");
+    setModelProgress(1);
+    setModelStatus("Remote AI ready");
+    setBackend("REMOTE");
   }, []);
 
   useEffect(() => {
@@ -665,16 +475,9 @@ function App() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => {
-    if (!autoBoot || bootedRef.current || !workerRef.current) return;
-
-    bootedRef.current = true;
-    const timerId = window.setTimeout(() => loadModel(resolvedModel), 450);
-    return () => window.clearTimeout(timerId);
-  }, [autoBoot, resolvedModel]);
 
   useEffect(() => {
-    if (!queuedPrompt || modelState !== "ready" || loadedModelKey !== resolvedModel || busy) {
+    if (!queuedPrompt || busy) {
       return;
     }
 
@@ -743,27 +546,42 @@ function App() {
   }
 
   function unloadModel() {
-    if (busy || agentPlanning || !workerRef.current) return;
-    workerRef.current.postMessage({ type: "unload" });
+    setNotice("No AI model is loaded on this device. J.A.R.V.I.S. inference is remote.");
   }
 
-  function createAgentPlan() {
+  async function createAgentPlan() {
     const goal = agentGoal.trim();
-    if (!goal || busy || agentPlanning || !workerRef.current) return;
+    if (!goal || busy || agentPlanning) return;
 
     const id = crypto.randomUUID();
     setAgentPlanning(true);
     setAgentRequestId(id);
-    setNotice("J.A.R.V.I.S. is building an approval-based task plan…");
+    setNotice("Remote J.A.R.V.I.S. is building an approval-based task plan…");
 
-    workerRef.current.postMessage({
-      type: "plan",
-      id,
-      modelKey: resolvedModel,
-      goal,
-      mode: resolvedMode,
-      personality
-    });
+    try {
+      const result = await buildRemotePlan(goal, resolvedMode, personality);
+      setAgentPlan({
+        id,
+        goal: result.goal,
+        steps: result.steps.map((text) => ({
+          id: crypto.randomUUID(),
+          text,
+          status: "pending"
+        })),
+        createdAt: Date.now()
+      });
+      setAgentOpen(true);
+      setNotice("Agent plan ready. Approve each step as you work through it.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? `Remote AI error: ${error.message}`
+          : "Remote AI could not build the plan."
+      );
+    } finally {
+      setAgentPlanning(false);
+      setAgentRequestId(null);
+    }
   }
 
   function updateAgentStep(stepId: string, status: AgentStepStatus) {
@@ -799,21 +617,13 @@ function App() {
     setPermissions((current) => ({ ...current, [key]: enabled }));
   }
 
-  function loadModel(target: ModelKey = resolvedModel, force = false) {
-    if (!workerRef.current) return;
-    if (!force && modelState === "loading") return;
-    if (!force && modelState === "ready" && loadedModelKey === target) return;
-
-    setModelState("loading");
-    setModelProgress(0);
-    setModelStatus(`Loading ${MODEL_INFO[target].label} neural core…`);
-    setNotice(
-      target === "power"
-        ? "Power model selected. This is a much larger local download and uses substantially more memory."
-        : `Loading ${MODEL_INFO[target].label} locally. No AI API key is required.`
-    );
-
-    workerRef.current.postMessage({ type: "load", modelKey: target });
+  function loadModel(target: ModelKey = resolvedModel, _force = false) {
+    setLoadedModelKey(target);
+    setModelState("ready");
+    setModelProgress(1);
+    setModelStatus("Remote AI ready");
+    setBackend("REMOTE");
+    setNotice(`${MODEL_INFO[target].label} selected. AI compute stays off this device.`);
   }
 
   function switchModel(preference: ModelPreference) {
@@ -821,10 +631,7 @@ function App() {
 
     setModelPreference(preference);
     const target = resolveModel(preference, hasWebGPU, cpuThreads, deviceMemory);
-
-    if (loadedModelKey !== target) {
-      loadModel(target, true);
-    }
+    loadModel(target, true);
   }
 
   function createSession() {
@@ -901,9 +708,10 @@ function App() {
   }
 
   function stopGeneration() {
-    if (!busy || !workerRef.current) return;
+    if (!busy) return;
+    stopRequestedRef.current = true;
     setStopping(true);
-    workerRef.current.postMessage({ type: "stop" });
+    setNotice("Stopping remote response…");
   }
 
   async function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
@@ -1111,13 +919,6 @@ function App() {
   ) {
     if (!text.trim() || busy) return;
 
-    if (modelState !== "ready" || loadedModelKey !== resolvedModel) {
-      setQueuedPrompt({ text, sessionId });
-      setNotice("Command queued. V4 will answer when the selected local model is ready.");
-      loadModel(resolvedModel);
-      return;
-    }
-
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -1135,27 +936,95 @@ function App() {
 
     const history = [...baseMessages, userMessage]
       .filter((message) => message.id !== "welcome-v4" && !message.streaming)
-      .slice(-18)
+      .slice(-24)
       .map(({ role, content }) => ({ role, content }));
 
-    pendingSessionsRef.current[userMessage.id] = sessionId;
+    const responseId = assistantMessage.id;
     updateSessionMessages(sessionId, () => [...baseMessages, userMessage, assistantMessage]);
 
     setBusy(true);
     setStopping(false);
+    stopRequestedRef.current = false;
     setFirstChunkMs(undefined);
     setTotalMs(undefined);
+    setModelState("ready");
+    setModelStatus("Remote AI streaming");
+    setBackend("REMOTE");
 
-    workerRef.current?.postMessage({
-      type: "generate",
-      id: userMessage.id,
-      modelKey: resolvedModel,
-      messages: history,
-      memories,
-      files: files.map(({ name, text }) => ({ name, text })),
-      mode: resolvedMode,
-      personality
-    });
+    try {
+      const result = await streamRemoteChat({
+        messages: history,
+        memories,
+        files: files.map(({ name, text }) => ({ name, text })),
+        mode: resolvedMode,
+        personality,
+        shouldStop: () => stopRequestedRef.current,
+        onToken: (token, firstMs) => {
+          if (firstMs) setFirstChunkMs(firstMs);
+          updateSessionMessages(sessionId, (current) =>
+            current.map((message) =>
+              message.id === responseId
+                ? {
+                    ...message,
+                    content: message.content + token,
+                    streaming: true
+                  }
+                : message
+            )
+          );
+        }
+      });
+
+      updateSessionMessages(sessionId, (current) =>
+        current.map((message) =>
+          message.id === responseId
+            ? {
+                ...message,
+                content: result.answer,
+                streaming: false,
+                stopped: result.stopped
+              }
+            : message
+        )
+      );
+
+      setFirstChunkMs(result.firstChunkMs || undefined);
+      setTotalMs(result.totalMs || undefined);
+      setMemoriesUsed(result.memoriesUsed);
+      setFileChunksUsed(result.fileChunksUsed);
+      setEstimatedTokens(result.estimatedTokens);
+      setTokensPerSecond(result.tokensPerSecond);
+
+      if (!result.stopped) {
+        speak(result.answer);
+      } else {
+        setNotice("Remote generation stopped.");
+      }
+    } catch (error) {
+      updateSessionMessages(sessionId, (current) =>
+        current.map((message) =>
+          message.id === responseId
+            ? {
+                ...message,
+                content:
+                  message.content ||
+                  "Remote AI request failed. Please try again.",
+                streaming: false
+              }
+            : message
+        )
+      );
+      setNotice(
+        error instanceof Error
+          ? `Remote AI error: ${error.message}`
+          : "Remote AI request failed."
+      );
+    } finally {
+      setBusy(false);
+      setStopping(false);
+      stopRequestedRef.current = false;
+      setModelStatus("Remote AI ready");
+    }
   }
 
   async function sendMessage(raw = input) {
@@ -1371,7 +1240,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>LOCAL INTELLIGENCE · V4</p>
+            <p>CLOUD INTELLIGENCE · V4</p>
           </div>
         </div>
 
@@ -1394,9 +1263,7 @@ function App() {
           </div>
 
           <p className="model-name">
-            {loadedModelKey
-              ? MODEL_INFO[loadedModelKey].detail
-              : MODEL_INFO[resolvedModel].detail} · {backend}
+            {MODEL_INFO[resolvedModel].detail} · {backend}
           </p>
 
           <div className="core-meter">
@@ -1420,7 +1287,7 @@ function App() {
         <section className="panel-section">
           <div className="section-title">
             <MonitorCog size={15} />
-            <span>V4 TELEMETRY</span>
+            <span>CLOUD TELEMETRY</span>
           </div>
 
           <div className="device-tier-card">
@@ -1443,7 +1310,7 @@ function App() {
             <div className="telemetry-item">
               <Gauge size={16} />
               <span>ACCELERATOR</span>
-              <strong>{hasWebGPU ? "WebGPU" : "WASM"}</strong>
+              <strong>"REMOTE GPU"</strong>
             </div>
             <div className="telemetry-item">
               <HardDrive size={16} />
@@ -1513,14 +1380,14 @@ function App() {
 
         <div className="security-badge">
           <ShieldCheck size={16} />
-          <span>Local inference · explicit file access</span>
+          <span>Remote inference · light client</span>
         </div>
       </aside>
 
       <main className="main-panel v3-main v4-main">
         <header className="topbar">
           <div className="hero-copy">
-            <span className="eyebrow">AGENTIC LOCAL INTELLIGENCE</span>
+            <span className="eyebrow">AGENTIC REMOTE INTELLIGENCE</span>
             <h2>
               J.A.R.V.I.S. <em>V4</em>
             </h2>
@@ -1626,7 +1493,7 @@ function App() {
           <div className="v3-control-card">
             <div className="v3-control-title">
               <Cpu size={15} />
-              <span>LOCAL MODEL</span>
+              <span>REMOTE PROFILE</span>
             </div>
 
             <div className="v3-selector">
@@ -1803,8 +1670,8 @@ function App() {
           <button onClick={() => openExternal("https://www.google.com")}>
             <Search size={15} /> Search
           </button>
-          <button onClick={unloadModel} disabled={busy || agentPlanning || !loadedModelKey}>
-            <X size={15} /> Unload Model
+          <button onClick={unloadModel} disabled={busy || agentPlanning}>
+            <Wifi size={15} /> Remote AI
           </button>
         </section>
 
@@ -1947,7 +1814,7 @@ function App() {
               <i />
               <span>{estimatedTokens ? `~${estimatedTokens} TOKENS` : "TOKEN ESTIMATE —"}</span>
               <i />
-              <span>NO API KEY</span>
+              <span>NO DEV API KEY</span>
             </div>
           </div>
         </section>
