@@ -1,127 +1,178 @@
-# J.A.R.V.I.S.
+# J.A.R.V.I.S. Web AI
 
-A futuristic desktop AI assistant built with **Electron + React + TypeScript**.
+A futuristic J.A.R.V.I.S.-inspired **AI web app with no AI API key**.
 
-## Current v1 features
+The language model runs directly in the visitor's browser using Transformers.js. The default model is a 4-bit version of **Qwen2.5-0.5B-Instruct**.
 
-- Gemini-powered AI chat
-- J.A.R.V.I.S.-style animated HUD
-- Push-to-talk voice input when supported by the Electron/Chromium build
-- Spoken AI replies with speech synthesis
+## What changed in v2
+
+- Web app instead of Electron desktop app
+- No Gemini key
+- No OpenAI key
+- No Ollama
+- No AI backend server
+- Browser-native local inference
+- WebGPU acceleration when available
+- CPU/WASM fallback when WebGPU is unavailable
 - Local chat history
-- User-controlled local memory
-- Live CPU, RAM, host, and uptime information
-- Safe quick actions for Calculator, Notepad, Paint, File Explorer, and YouTube
-- Permission-gated Electron IPC with context isolation
-- No arbitrary shell command execution
-- Gemini API key stays in the Electron main process
-- Windows installer build with electron-builder
+- User-controlled local memories
+- Voice input when the browser supports SpeechRecognition
+- Spoken responses with browser speech synthesis
+- Model download/load progress
+- Model files can be reused from browser cache
+- Static-host friendly for Netlify, Vercel, GitHub Pages, or similar hosts
 
-## Run it
+## How it works
 
-### 1. Install Node.js
+```text
+Browser
+  |
+  +-- React UI
+  |
+  +-- Dedicated AI Web Worker
+        |
+        +-- Transformers.js
+              |
+              +-- Qwen2.5-0.5B-Instruct (4-bit)
+              |
+              +-- WebGPU when available
+              +-- WASM fallback
+```
 
-Use Node.js 20 or newer.
+There is no AI API secret to configure.
 
-### 2. Clone and install
+## Important browser limitation
 
-The GitHub repository name ends in a period. Windows paths cannot end in a period, so clone it into a safe local folder name:
+This is a web app, so J.A.R.V.I.S. cannot silently control Windows, launch File Explorer, inspect arbitrary files, or run PowerShell. Browsers intentionally block that kind of operating-system access.
 
-```bash
-git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-app
-cd jarvis-app
+It can still provide AI chat, voice, local memory, browser actions, and links.
+
+## Run locally
+
+### 1. Clone
+
+The GitHub repository name ends with a period. Windows folder names cannot end with a period, so clone into a safe folder name:
+
+```powershell
+git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-web
+cd jarvis-web
+```
+
+### 2. Install
+
+```powershell
 npm install
 ```
 
-### 3. Configure Gemini
-
-Copy the example environment file:
-
-**Windows PowerShell**
+### 3. Start
 
 ```powershell
-Copy-Item .env.example .env
-```
-
-Then edit `.env`:
-
-```env
-GEMINI_API_KEY=your_real_key_here
-GEMINI_MODEL=gemini-2.5-flash
-```
-
-Never commit your `.env` file.
-
-### 4. Start development mode
-
-```bash
 npm run dev
 ```
 
-### 5. Build
+Open the localhost address shown by Vite.
 
-```bash
+## First AI load
+
+Click **Activate AI**.
+
+On the first load, the browser downloads the quantized model files. This can be a large download and may take longer on a slow connection. Afterward, the browser can reuse cached model files.
+
+WebGPU is preferred for speed. If WebGPU is unavailable, J.A.R.V.I.S. automatically tries the CPU/WASM path.
+
+## Build
+
+```powershell
 npm run build
-npm start
 ```
 
-### 6. Create a Windows installer
+The deployable site is created in:
 
-```bash
-npm run dist
+```text
+dist/
 ```
+
+## Deploy to Netlify
+
+This repo includes `netlify.toml`.
+
+Netlify settings:
+
+- Build command: `npm run build`
+- Publish directory: `dist`
+- Environment variables: **none required**
 
 ## Commands
 
-Inside J.A.R.V.I.S. you can type:
+- `/load` — activate/load AI
+- `/clear` — clear the chat
+- `/new` — start a new chat
+- `/youtube` — open YouTube
+- `/github` — open this repository
+- `/search your query` — open a browser web search
 
-- `/calc` — Calculator
-- `/notepad` — Notepad
-- `/paint` — Paint
-- `/files` — File Explorer
-- `/youtube` — YouTube
-- `/clear` — Clear chat
+## Model
 
-Natural commands like **"open calculator"** and **"open files"** also work.
-
-## Architecture
+Default:
 
 ```text
-jarvis-app/
-├─ electron/
-│  ├─ main.ts          # Gemini, system info, safe desktop actions
-│  └─ preload.ts       # narrow IPC bridge
+onnx-community/Qwen2.5-0.5B-Instruct
+dtype: q4
+```
+
+The model is loaded by `src/ai.worker.ts`.
+
+## Project structure
+
+```text
+J.A.R.V.I.S.
+├─ public/
+│  ├─ jarvis.svg
+│  └─ manifest.webmanifest
 ├─ src/
-│  ├─ App.tsx          # assistant UI + chat + voice + memory
+│  ├─ ai.worker.ts
+│  ├─ App.tsx
 │  ├─ main.tsx
 │  ├─ styles.css
 │  └─ vite-env.d.ts
-├─ .env.example
 ├─ index.html
+├─ netlify.toml
 ├─ package.json
 ├─ tsconfig.json
-├─ tsconfig.electron.json
 └─ vite.config.ts
 ```
 
-## Security design
+## Privacy
 
-The renderer does **not** have Node.js access. Electron uses `contextIsolation: true` and `nodeIntegration: false`. The preload bridge exposes only a small set of methods.
+Chat messages and J.A.R.V.I.S. memories are stored locally in browser storage.
 
-Desktop app launching is allowlisted in the main process. J.A.R.V.I.S. v1 cannot execute arbitrary PowerShell, CMD, shell scripts, or user-supplied executable paths.
+The AI inference itself runs in the browser. The model files are fetched from the model host when they are not already cached.
+
+J.A.R.V.I.S. does not need to send prompts to Gemini, OpenAI, Claude, or another hosted LLM API to generate its responses.
+
+## Current limitations
+
+- Initial model download can be large.
+- Small local models are less capable than large cloud AI models.
+- WebGPU support varies by browser/device.
+- Browser voice recognition support varies.
+- This local model does not automatically have live internet knowledge.
+- Browser security prevents unrestricted desktop control.
 
 ## Roadmap
 
-- Wake word support
-- Optional offline/local model provider
-- Calendar and email integrations
-- Weather/news cards
-- Better long-term memory with an explicit memory manager
-- Optional screen understanding with per-action permission prompts
-- Plugin/tool system with capability permissions
-- Windows tray mode
-- Custom themes, HUD widgets, and personality controls
+- Model selector
+- Smaller/faster model option for phones
+- Streaming token output
+- Fully cached PWA shell
+- Optional local Whisper speech recognition
+- Better local memory search
+- Browser permission dashboard
+- Optional user-approved file import
+- More browser tools
 
-## Note
+## License
 
-This is an original J.A.R.V.I.S.-inspired assistant project and is not affiliated with Marvel or Disney.
+MIT.
+
+This is an original J.A.R.V.I.S.-inspired project and is not affiliated with Marvel or Disney.
