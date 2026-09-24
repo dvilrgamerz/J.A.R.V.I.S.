@@ -1,7 +1,7 @@
 {
-  "name": "J.A.R.V.I.S. Web AI V3",
+  "name": "J.A.R.V.I.S. Web AI V4",
   "short_name": "J.A.R.V.I.S.",
-  "description": "Private multi-model browser AI with local memory, file chat, voice and tools.",
+  "description": "Private multi-model browser AI with approval-based agent planning, local memory, file chat, permissions, voice and tools.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
