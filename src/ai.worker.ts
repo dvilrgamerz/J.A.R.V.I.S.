@@ -21,7 +21,16 @@ type Personality = "standard" | "buddy" | "programmer" | "study";
 
 type IncomingMessage =
   | { type: "load"; modelKey: ModelKey }
+  | { type: "unload" }
   | { type: "stop" }
+  | {
+      type: "plan";
+      id: string;
+      modelKey: ModelKey;
+      goal: string;
+      mode?: PerformanceMode;
+      personality?: Personality;
+    }
   | {
       type: "generate";
       id: string;
@@ -182,13 +191,26 @@ function hashWord(word: string) {
   return Math.abs(hash >>> 0);
 }
 
-function vectorize(text: string, dimensions = 128) {
+function vectorize(text: string, dimensions = 192) {
   const vector = new Float32Array(dimensions);
   const tokens = words(text);
+  const features = [...tokens];
+
+  for (let index = 0; index < tokens.length - 1; index += 1) {
+    features.push(`${tokens[index]}_${tokens[index + 1]}`);
+  }
 
   for (const token of tokens) {
+    if (token.length >= 5) {
+      for (let index = 0; index <= token.length - 3; index += 1) {
+        features.push(`#${token.slice(index, index + 3)}`);
+      }
+    }
+  }
+
+  for (const token of features) {
     const slot = hashWord(token) % dimensions;
-    vector[slot] += 1;
+    vector[slot] += token.startsWith("#") ? 0.35 : token.includes("_") ? 1.25 : 1;
   }
 
   let norm = 0;
@@ -349,7 +371,7 @@ async function generate(
     ? `\n\nUser-approved local file excerpts:\n\n${fileContext.join("\n\n")}`
     : "";
 
-  const systemPrompt = `You are J.A.R.V.I.S. V3, a private AI assistant running locally inside the user's browser.
+  const systemPrompt = `You are J.A.R.V.I.S. V4, a private AI assistant running locally inside the user's browser.
 ${PERSONALITIES[personality] || PERSONALITIES.standard}
 Answer directly and naturally. Prefer useful answers over filler.
 For simple questions, be brief. For difficult or technical questions, explain the key reasoning and practical steps.
@@ -421,15 +443,22 @@ When the user's intent is clear, act on it without unnecessary follow-up questio
     throw new Error("The browser model returned an empty response.");
   }
 
+  const totalMs = Math.round(performance.now() - startedAt);
+  const estimatedTokens = Math.max(1, Math.round((answer || streamedText).length / 4));
+  const tokensPerSecond =
+    totalMs > 0 ? Number((estimatedTokens / (totalMs / 1000)).toFixed(1)) : 0;
+
   post("result", {
     id,
     answer: answer || "Generation stopped.",
-    totalMs: Math.round(performance.now() - startedAt),
+    totalMs,
     firstChunkMs: firstChunkAt ? Math.round(firstChunkAt - startedAt) : 0,
     mode,
     modelKey,
     memoriesUsed: memoryList.length,
     fileChunksUsed: fileContext.length,
+    estimatedTokens,
+    tokensPerSecond,
     stopped: interrupted
   });
 
@@ -438,9 +467,120 @@ When the user's intent is clear, act on it without unnecessary follow-up questio
   interrupted = false;
 }
 
+
+function parsePlan(text: string, goal: string) {
+  const lines = text
+    .split(/\n+/)
+    .map((line) =>
+      line
+        .replace(/^\s*(?:step\s*)?\d+[.)\-:]?\s*/i, "")
+        .replace(/^\s*[-*•]\s*/, "")
+        .trim()
+    )
+    .filter((line) => line.length >= 4 && line.length <= 220);
+
+  const unique = Array.from(new Set(lines)).slice(0, 8);
+
+  if (unique.length >= 2) return unique;
+
+  return [
+    `Define the exact outcome for: ${goal.slice(0, 120)}`,
+    "Gather the information or inputs needed for the task.",
+    "Complete the main work in small verifiable steps.",
+    "Review the result, fix issues, and confirm the goal is satisfied."
+  ];
+}
+
+async function buildPlan(
+  id: string,
+  modelKey: ModelKey,
+  goal: string,
+  mode: PerformanceMode = "balanced",
+  personality: Personality = "standard"
+) {
+  await loadModel(modelKey);
+
+  const cleanGoal = goal.trim().slice(0, 1800);
+  if (!cleanGoal) throw new Error("Agent goal is empty.");
+
+  const config = getModeConfig(mode, modelKey);
+  const startedAt = performance.now();
+
+  const prompt = `You are J.A.R.V.I.S. V4 Agent Planner.
+Create a practical action plan for the user's goal.
+Return 3 to 7 short steps, one per line, numbered 1., 2., 3.
+Do not include hidden reasoning, introductions, warnings, or commentary.
+Keep every step concrete and user-verifiable.
+Personality mode: ${personality}.
+
+Goal: ${cleanGoal}`;
+
+  const result: any = await generator(
+    [{ role: "system", content: prompt }, { role: "user", content: cleanGoal }],
+    {
+      max_new_tokens: Math.min(220, config.maxNewTokens),
+      do_sample: false,
+      repetition_penalty: 1.05
+    }
+  );
+
+  const generated = result?.[0]?.generated_text;
+  let raw = "";
+
+  if (Array.isArray(generated)) {
+    const last = generated[generated.length - 1];
+    raw = typeof last?.content === "string" ? last.content.trim() : "";
+  } else if (typeof generated === "string") {
+    raw = generated.trim();
+  }
+
+  const steps = parsePlan(raw, cleanGoal);
+
+  post("planResult", {
+    id,
+    goal: cleanGoal,
+    steps,
+    totalMs: Math.round(performance.now() - startedAt),
+    modelKey
+  });
+}
+
+function unloadModel() {
+  if (activeStopper) {
+    interrupted = true;
+    activeStopper.interrupt();
+  }
+
+  generator = null;
+  loadedModelKey = null;
+  loadingPromise = null;
+  activeStopper = null;
+  activeGenerationId = null;
+  interrupted = false;
+  backend = "WASM";
+
+  post("unloaded");
+}
+
 self.onmessage = async (event: MessageEvent<IncomingMessage>) => {
   try {
     const message = event.data;
+
+    if (message.type === "unload") {
+      unloadModel();
+      return;
+    }
+
+    if (message.type === "plan") {
+      await buildPlan(
+        message.id,
+        message.modelKey,
+        message.goal,
+        message.mode || "balanced",
+        message.personality || "standard"
+      );
+      return;
+    }
 
     if (message.type === "stop") {
       if (activeStopper) {
