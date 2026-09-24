@@ -1,51 +1,52 @@
-# J.A.R.V.I.S. Web AI V3
+# J.A.R.V.I.S. Web AI V2
 
-A futuristic **keyless AI web app** inspired by J.A.R.V.I.S.
+A futuristic **keyless local AI web app** inspired by J.A.R.V.I.S.
 
-J.A.R.V.I.S. runs a quantized language model directly in the browser with Transformers.js. No Gemini key, OpenAI key, Ollama service, or AI backend is required.
+J.A.R.V.I.S. V2 runs a quantized language model directly in the browser with Transformers.js. No Gemini key, OpenAI key, Ollama service, or AI backend is required.
 
-## V3 highlights
+## V2 highlights
 
-- Live streamed responses instead of waiting for a complete answer
-- **Turbo mode** for the fastest responses
-- **Balanced mode** for everyday chat
-- **Smart mode** for longer, deeper responses
+- **Auto performance mode** that adapts to the browser/device
+- Turbo, Balanced, and Smart manual modes
 - WebGPU acceleration when available
-- Automatic CPU/WASM fallback
-- Optional **Auto Boot** so the AI core starts loading when the site opens
+- CPU/WASM fallback when WebGPU is unavailable
+- Live streamed responses
+- Command queuing while the local model boots
+- Smarter memory retrieval that selects memories relevant to the current question
 - First-text and total-response latency telemetry
-- Smaller context in Turbo mode to reduce prefill time
-- Adaptive response length by performance mode
-- Dedicated AI Web Worker so inference does not freeze the interface
+- Device tier detection: Light, Standard, or Performance
+- Auto Boot option
 - Local chat history
 - User-controlled local memories
+- Shows how many memories were used for the last reply
 - Voice input when browser speech recognition is supported
-- Spoken J.A.R.V.I.S. responses
-- Model download/load progress
-- Browser model caching
-- Animated V3 reactor HUD with live core state, streaming cursor, status effects, and responsive controls
-- Static hosting support for Netlify, Vercel, GitHub Pages, and similar services
+- Spoken J.A.R.V.I.S. replies
+- One-click copy for assistant responses
+- Quick prompt cards
+- Animated reactor HUD
+- Static hosting support for Netlify, Vercel, GitHub Pages, and similar hosts
 
 ## Performance modes
 
 | Mode | Best for | Behavior |
 | --- | --- | --- |
-| **Turbo** | Older PCs, fastest chat | Shorter context, deterministic output, shorter responses |
-| **Balanced** | Normal use | Medium context and response length |
-| **Smart** | Harder questions | More history, longer responses, more generation |
+| **Auto** | Most users | Picks a mode from available browser hardware |
+| **Turbo** | Fastest responses | Short context, shorter responses, deterministic generation |
+| **Balanced** | Everyday use | Medium context and response length |
+| **Smart** | Harder questions | More history, more memories, longer output |
 
-Turbo is the default.
+Auto is the default.
 
 ## AI architecture
 
 ```text
 Browser
   |
-  +-- React V3 HUD
+  +-- React V2 HUD
   |
   +-- AI Web Worker
         |
-        +-- Transformers.js 4.x
+        +-- Transformers.js
               |
               +-- Qwen2.5-0.5B-Instruct (Q4)
               |
@@ -54,7 +55,18 @@ Browser
               +-- WASM / CPU fallback
 ```
 
-The worker uses text streaming so generated text is sent back to the React interface as it appears.
+## Smarter memory
+
+V2 does not blindly send every saved memory to the model.
+
+For each prompt it:
+
+1. extracts useful keywords from the current question,
+2. compares them with saved memories,
+3. ranks memories by relevance and recency,
+4. sends only the best matches for the selected performance mode.
+
+This keeps the prompt smaller and reduces irrelevant context.
 
 ## Model
 
@@ -63,7 +75,7 @@ onnx-community/Qwen2.5-0.5B-Instruct
 dtype: q4
 ```
 
-The model configuration and generation modes live in:
+The local model and memory-selection logic live in:
 
 ```text
 src/ai.worker.ts
@@ -71,15 +83,15 @@ src/ai.worker.ts
 
 ## First load
 
-The first time J.A.R.V.I.S. starts, the browser has to download the model files.
+The first time J.A.R.V.I.S. starts, the browser downloads the local model files.
 
-After the model is cached, later loads can be much faster.
+Afterward, the browser can reuse cached model files.
 
-For best performance, use a current Chromium-based browser with WebGPU enabled.
+A current Chromium-based browser with WebGPU support will usually give the best experience.
 
 ## Run locally
 
-Because the repository name ends in a period, clone it into a Windows-safe folder name:
+Because the repository name ends in a period, clone into a Windows-safe local folder:
 
 ```powershell
 git clone https://github.com/dvilrgamerz/J.A.R.V.I.S..git jarvis-web
@@ -102,7 +114,7 @@ dist/
 
 ## Netlify
 
-This repo includes `netlify.toml`.
+The repo includes `netlify.toml`.
 
 - Build command: `npm run build`
 - Publish directory: `dist`
@@ -121,7 +133,7 @@ This repo includes `netlify.toml`.
 
 AI inference happens locally in the browser.
 
-Chat history and user-approved memories are stored in browser storage. The model files are fetched from their model host if they are not already cached.
+Chat history and user-approved memories are stored in browser storage. Model files are fetched from their model host if they are not already cached.
 
 Prompts do not need to be sent to Gemini, OpenAI, Claude, or another hosted LLM API for J.A.R.V.I.S. to answer.
 
@@ -153,14 +165,14 @@ J.A.R.V.I.S.
 
 ## Next upgrades
 
-- Multiple local model choices
-- Faster phone-specific model
+- Multiple local models
+- Ultra-light phone model
 - User-approved local file chat
-- Better semantic memory retrieval
+- Semantic vector memory
 - Local speech recognition
-- Installable/offline PWA shell
-- Optional browser tools
-- Smarter automatic mode selection based on device performance
+- Better PWA offline support
+- Browser tool permission center
+- Smarter automatic model selection
 
 ## License
 
