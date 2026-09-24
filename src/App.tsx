@@ -13,6 +13,8 @@ import {
   MonitorCog,
   Plus,
   RefreshCw,
+  Rocket,
+  Search,
   Send,
   ShieldCheck,
   Sparkles,
@@ -28,24 +30,55 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   createdAt: number;
+  streaming?: boolean;
 };
 
 type ModelState = "idle" | "loading" | "ready" | "error";
+type PerformanceMode = "turbo" | "balanced" | "smart";
 
 type WorkerMessage =
   | { type: "progress"; progress: number; status: string; file?: string }
   | { type: "ready"; model: string; backend: string }
-  | { type: "result"; id: string; answer: string }
+  | { type: "token"; id: string; text: string; firstChunkMs?: number }
+  | {
+      type: "result";
+      id: string;
+      answer: string;
+      totalMs?: number;
+      firstChunkMs?: number;
+      mode?: PerformanceMode;
+    }
   | { type: "error"; message: string };
 
-const MODEL_NAME = "Qwen2.5 0.5B · 4-bit";
+const MODEL_NAME = "Qwen2.5 0.5B · Q4";
 
 const starterMessage: Message = {
   id: "welcome",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. web core online. I use a local browser model with no API key. Activate the AI core once, then chat normally.",
+    "J.A.R.V.I.S. v3 online. Local AI, no API key. I can stream replies live and switch between Turbo, Balanced, and Smart modes.",
   createdAt: Date.now()
+};
+
+const MODE_INFO: Record<
+  PerformanceMode,
+  { label: string; detail: string; icon: typeof Rocket }
+> = {
+  turbo: {
+    label: "Turbo",
+    detail: "Fastest",
+    icon: Rocket
+  },
+  balanced: {
+    label: "Balanced",
+    detail: "Daily",
+    icon: Gauge
+  },
+  smart: {
+    label: "Smart",
+    detail: "Deep",
+    icon: BrainCircuit
+  }
 };
 
 function readStored<T>(key: string, fallback: T): T {
@@ -61,6 +94,11 @@ function formatStorage(bytes?: number) {
   if (!bytes) return "—";
   const gb = bytes / 1024 ** 3;
   return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(bytes / 1024 ** 2)} MB`;
+}
+
+function formatLatency(ms?: number) {
+  if (!ms) return "—";
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
 }
 
 function openExternal(url: string) {
@@ -86,8 +124,17 @@ function App() {
   const [notice, setNotice] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
   const [storageUsage, setStorageUsage] = useState<number | undefined>();
+  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>(() =>
+    readStored<PerformanceMode>("jarvis.mode", "turbo")
+  );
+  const [autoBoot, setAutoBoot] = useState<boolean>(() =>
+    readStored<boolean>("jarvis.autoboot", "gpu" in navigator)
+  );
+  const [firstChunkMs, setFirstChunkMs] = useState<number | undefined>();
+  const [totalMs, setTotalMs] = useState<number | undefined>();
   const workerRef = useRef<Worker | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const bootedRef = useRef(false);
 
   const hasWebGPU = "gpu" in navigator;
   const cpuThreads = navigator.hardwareConcurrency || 0;
@@ -115,18 +162,42 @@ function App() {
         setModelProgress(1);
         setModelStatus("AI core ready");
         setBackend(data.backend);
-        setNotice(`${data.model} loaded with ${data.backend}.`);
+        setNotice(`Local AI ready on ${data.backend}. Responses will stream live.`);
+        return;
+      }
+
+      if (data.type === "token") {
+        if (data.firstChunkMs) setFirstChunkMs(data.firstChunkMs);
+        const responseId = `assistant-${data.id}`;
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === responseId
+              ? {
+                  ...message,
+                  content: message.content + data.text,
+                  streaming: true
+                }
+              : message
+          )
+        );
         return;
       }
 
       if (data.type === "result") {
-        const assistantMessage: Message = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: data.answer,
-          createdAt: Date.now()
-        };
-        setMessages((current) => [...current, assistantMessage]);
+        const responseId = `assistant-${data.id}`;
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === responseId
+              ? {
+                  ...message,
+                  content: data.answer,
+                  streaming: false
+                }
+              : message
+          )
+        );
+        setFirstChunkMs(data.firstChunkMs || undefined);
+        setTotalMs(data.totalMs || undefined);
         setBusy(false);
         speak(data.answer);
         return;
@@ -137,6 +208,9 @@ function App() {
         setModelState((current) => (current === "ready" ? current : "error"));
         setModelStatus("AI core error");
         setNotice(data.message);
+        setMessages((current) =>
+          current.filter((message) => !message.streaming || message.content.trim())
+        );
       }
     };
 
@@ -154,13 +228,33 @@ function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("jarvis.messages", JSON.stringify(messages.slice(-80)));
+    if (!autoBoot || bootedRef.current || !workerRef.current) return;
+    bootedRef.current = true;
+    const timer = window.setTimeout(() => {
+      loadModel();
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [autoBoot]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "jarvis.messages",
+      JSON.stringify(messages.filter((message) => !message.streaming).slice(-80))
+    );
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
     localStorage.setItem("jarvis.memories", JSON.stringify(memories));
   }, [memories]);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.mode", JSON.stringify(performanceMode));
+  }, [performanceMode]);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.autoboot", JSON.stringify(autoBoot));
+  }, [autoBoot]);
 
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
@@ -180,8 +274,8 @@ function App() {
   }, [modelState]);
 
   const status = useMemo(() => {
-    if (busy) return "THINKING";
-    if (modelState === "loading") return "LOADING";
+    if (busy) return "GENERATING";
+    if (modelState === "loading") return "BOOTING";
     if (modelState === "ready") return "ONLINE";
     if (modelState === "error") return "ERROR";
     return "STANDBY";
@@ -191,20 +285,20 @@ function App() {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
-    utterance.pitch = 0.9;
+    utterance.rate = 1.04;
+    utterance.pitch = 0.88;
     window.speechSynthesis.speak(utterance);
   }
 
   function loadModel() {
-    if (modelState === "loading") return;
+    if (modelState === "loading" || modelState === "ready") return;
     setModelState("loading");
     setModelProgress(0);
-    setModelStatus("Starting local AI download/load…");
+    setModelStatus("Initializing neural core…");
     setNotice(
       hasWebGPU
-        ? "Loading the 4-bit model with WebGPU. The first load downloads model files; later loads can reuse browser cache."
-        : "WebGPU is not available, so J.A.R.V.I.S. will use the slower CPU/WASM fallback."
+        ? "WebGPU detected. J.A.R.V.I.S. is loading the accelerated local model."
+        : "WebGPU is unavailable, so J.A.R.V.I.S. will use the slower CPU/WASM fallback."
     );
     workerRef.current?.postMessage({ type: "load" });
   }
@@ -212,6 +306,8 @@ function App() {
   function clearChat() {
     setMessages([starterMessage]);
     setNotice("Conversation cleared.");
+    setFirstChunkMs(undefined);
+    setTotalMs(undefined);
   }
 
   async function handleLocalCommand(text: string): Promise<boolean> {
@@ -261,7 +357,7 @@ function App() {
     if (await handleLocalCommand(text)) return;
 
     if (modelState !== "ready") {
-      setNotice("Activate the local AI core first. No API key is needed.");
+      setNotice("Neural core is booting. Your browser needs to finish loading the local model first.");
       if (modelState === "idle" || modelState === "error") loadModel();
       return;
     }
@@ -273,19 +369,30 @@ function App() {
       createdAt: Date.now()
     };
 
+    const assistantMessage: Message = {
+      id: `assistant-${userMessage.id}`,
+      role: "assistant",
+      content: "",
+      createdAt: Date.now(),
+      streaming: true
+    };
+
     const history = [...messages, userMessage]
-      .filter((message) => message.id !== "welcome")
+      .filter((message) => message.id !== "welcome" && !message.streaming)
       .slice(-14)
       .map(({ role, content }) => ({ role, content }));
 
-    setMessages((current) => [...current, userMessage]);
+    setMessages((current) => [...current, userMessage, assistantMessage]);
     setBusy(true);
+    setFirstChunkMs(undefined);
+    setTotalMs(undefined);
 
     workerRef.current?.postMessage({
       type: "generate",
       id: userMessage.id,
       messages: history,
-      memories
+      memories,
+      mode: performanceMode
     });
   }
 
@@ -312,7 +419,7 @@ function App() {
     recognition.onend = () => setListening(false);
     recognition.onerror = () => {
       setListening(false);
-      setNotice("Voice recognition stopped. Check your browser microphone permission.");
+      setNotice("Voice recognition stopped. Check browser microphone permission.");
     };
     recognition.onresult = (event: any) => {
       const transcript = event.results?.[0]?.[0]?.transcript?.trim();
@@ -332,26 +439,35 @@ function App() {
     setMemoryDraft("");
   }
 
+  const ModeIcon = MODE_INFO[performanceMode].icon;
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${busy ? "is-thinking" : ""}`}>
+      <div className="scanlines" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
+      <div className="ambient ambient-three" />
 
       <aside className="side-panel">
         <div className="brand">
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>BROWSER INTELLIGENCE</p>
+            <p>NEURAL WEB INTERFACE · V3</p>
           </div>
         </div>
 
         <section className="reactor-card">
-          <div className="reactor" aria-hidden="true">
-            <div className="reactor-ring ring-one" />
-            <div className="reactor-ring ring-two" />
-            <div className="reactor-ring ring-three" />
-            <div className="reactor-core"><CirclePower size={31} /></div>
+          <div className="reactor-shell">
+            <div className="reactor" aria-hidden="true">
+              <div className="reactor-ring ring-one" />
+              <div className="reactor-ring ring-two" />
+              <div className="reactor-ring ring-three" />
+              <div className="reactor-ticks" />
+              <div className="reactor-core"><CirclePower size={31} /></div>
+            </div>
+            <div className="reactor-orbit orbit-a" />
+            <div className="reactor-orbit orbit-b" />
           </div>
 
           <div className="status-line">
@@ -359,12 +475,18 @@ function App() {
             <span>{status}</span>
           </div>
           <p className="model-name">{MODEL_NAME} · {backend}</p>
+
+          <div className="core-meter">
+            <span>CORE</span>
+            <div><i style={{ width: modelState === "ready" ? "100%" : `${Math.round(modelProgress * 100)}%` }} /></div>
+            <strong>{modelState === "ready" ? "100" : Math.round(modelProgress * 100)}%</strong>
+          </div>
         </section>
 
         <section className="panel-section">
           <div className="section-title">
             <MonitorCog size={15} />
-            <span>BROWSER TELEMETRY</span>
+            <span>NEURAL TELEMETRY</span>
           </div>
 
           <div className="telemetry-grid">
@@ -376,17 +498,28 @@ function App() {
             <div className="telemetry-item">
               <MemoryStick size={16} />
               <span>MEMORY</span>
-              <strong>{deviceMemory ? `${deviceMemory} GB+` : "Browser hidden"}</strong>
+              <strong>{deviceMemory ? `${deviceMemory} GB+` : "Hidden"}</strong>
             </div>
             <div className="telemetry-item">
               <Gauge size={16} />
-              <span>WEBGPU</span>
-              <strong>{hasWebGPU ? "Available" : "Fallback"}</strong>
+              <span>ACCELERATOR</span>
+              <strong>{hasWebGPU ? "WebGPU" : "WASM"}</strong>
             </div>
             <div className="telemetry-item">
               <HardDrive size={16} />
-              <span>CACHE USED</span>
+              <span>CACHE</span>
               <strong>{formatStorage(storageUsage)}</strong>
+            </div>
+          </div>
+
+          <div className="latency-row">
+            <div>
+              <span>FIRST TEXT</span>
+              <strong>{formatLatency(firstChunkMs)}</strong>
+            </div>
+            <div>
+              <span>TOTAL</span>
+              <strong>{formatLatency(totalMs)}</strong>
             </div>
           </div>
         </section>
@@ -423,7 +556,7 @@ function App() {
                 if (event.key === "Enter") saveMemory();
               }}
               placeholder="Remember something…"
-              maxLength={400}
+              maxLength={320}
             />
             <button onClick={saveMemory} aria-label="Save memory">
               <Plus size={16} />
@@ -433,18 +566,25 @@ function App() {
 
         <div className="security-badge">
           <ShieldCheck size={16} />
-          <span>AI runs in your browser · no API key</span>
+          <span>On-device inference · zero AI keys</span>
         </div>
       </aside>
 
       <main className="main-panel">
         <header className="topbar">
-          <div>
-            <span className="eyebrow">WEB COMMAND INTERFACE</span>
-            <h2>J.A.R.V.I.S. is standing by.</h2>
+          <div className="hero-copy">
+            <span className="eyebrow">ADVANCED NEURAL COMMAND INTERFACE</span>
+            <h2>
+              J.A.R.V.I.S. <em>V3</em>
+            </h2>
+            <p>Fast local intelligence. Private by design.</p>
           </div>
 
           <div className="top-actions">
+            <div className="live-pill">
+              <span className={online ? "live-dot" : "live-dot offline"} />
+              {online ? "NETWORK" : "OFFLINE"}
+            </div>
             <button
               className={`icon-button ${voiceEnabled ? "active" : ""}`}
               onClick={() => setVoiceEnabled((value) => !value)}
@@ -462,15 +602,55 @@ function App() {
           </div>
         </header>
 
+        <section className="command-deck">
+          <div className="mode-cluster">
+            <div className="mode-heading">
+              <ModeIcon size={15} />
+              <span>RESPONSE MODE</span>
+            </div>
+            <div className="mode-selector">
+              {(Object.keys(MODE_INFO) as PerformanceMode[]).map((mode) => {
+                const item = MODE_INFO[mode];
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={mode}
+                    className={performanceMode === mode ? "selected" : ""}
+                    onClick={() => setPerformanceMode(mode)}
+                    disabled={busy}
+                  >
+                    <Icon size={14} />
+                    <span>{item.label}</span>
+                    <small>{item.detail}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="autoboot-toggle">
+            <input
+              type="checkbox"
+              checked={autoBoot}
+              onChange={(event) => setAutoBoot(event.target.checked)}
+            />
+            <span className="toggle-track"><i /></span>
+            <span>
+              Auto Boot
+              <small>load core on launch</small>
+            </span>
+          </label>
+        </section>
+
         {modelState !== "ready" && (
           <div className="setup-banner model-loader">
             <div className="model-loader-copy">
               <strong>
                 {modelState === "loading"
-                  ? "Loading local AI core"
+                  ? "Neural core boot sequence"
                   : modelState === "error"
-                    ? "AI core needs another try"
-                    : "No API key required"}
+                    ? "Core restart required"
+                    : "J.A.R.V.I.S. core is in standby"}
               </strong>
               <span>{modelStatus}</span>
 
@@ -493,18 +673,21 @@ function App() {
               {modelState === "loading"
                 ? `${Math.round(modelProgress * 100)}%`
                 : modelState === "error"
-                  ? "Retry"
-                  : "Activate AI"}
+                  ? "Restart Core"
+                  : "Initialize"}
             </button>
           </div>
         )}
 
         <section className="quick-actions" aria-label="Quick actions">
-          <button onClick={loadModel} disabled={modelState === "loading"}>
-            <RefreshCw size={16} /> AI Core
+          <button onClick={loadModel} disabled={modelState === "loading" || modelState === "ready"}>
+            <RefreshCw size={16} /> Core
           </button>
           <button onClick={clearChat}>
-            <Trash2 size={16} /> Clear Chat
+            <Trash2 size={16} /> New Session
+          </button>
+          <button onClick={() => openExternal("https://www.google.com")}>
+            <Search size={16} /> Search
           </button>
           <button onClick={() => openExternal("https://www.youtube.com")}>
             <Globe2 size={16} /> YouTube
@@ -512,15 +695,16 @@ function App() {
           <button onClick={() => openExternal("https://github.com/dvilrgamerz/J.A.R.V.I.S.")}>
             <ExternalLink size={16} /> GitHub
           </button>
-          <button disabled>
-            <Wifi size={16} /> {online ? "Online" : "Offline"}
-          </button>
         </section>
 
         <section className="chat-card">
+          <div className="chat-glow" />
           <div className="chat-stream">
             {messages.map((message) => (
-              <article className={`message-row ${message.role}`} key={message.id}>
+              <article
+                className={`message-row ${message.role} ${message.streaming ? "streaming" : ""}`}
+                key={message.id}
+              >
                 <div className="message-avatar">
                   {message.role === "assistant" ? <Sparkles size={17} /> : "YOU"}
                 </div>
@@ -528,25 +712,32 @@ function App() {
                 <div className="message-content">
                   <div className="message-meta">
                     <strong>{message.role === "assistant" ? "J.A.R.V.I.S." : "YOU"}</strong>
-                    <span>
-                      {new Date(message.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </span>
+                    {message.streaming ? (
+                      <span className="stream-badge">LIVE</span>
+                    ) : (
+                      <span>
+                        {new Date(message.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </span>
+                    )}
                   </div>
-                  <p>{message.content}</p>
+                  <p>
+                    {message.content}
+                    {message.streaming && <span className="cursor-block" />}
+                  </p>
                 </div>
               </article>
             ))}
 
-            {busy && (
+            {busy && !messages.some((message) => message.streaming) && (
               <article className="message-row assistant">
                 <div className="message-avatar"><Sparkles size={17} /></div>
                 <div className="message-content">
                   <div className="message-meta">
                     <strong>J.A.R.V.I.S.</strong>
-                    <span>local inference</span>
+                    <span>NEURAL PREFILL</span>
                   </div>
                   <div className="thinking"><i /><i /><i /></div>
                 </div>
@@ -582,8 +773,8 @@ function App() {
                   listening
                     ? "Listening…"
                     : modelState === "ready"
-                      ? "Ask J.A.R.V.I.S. anything…"
-                      : "Activate the AI core, then start chatting…"
+                      ? `Command J.A.R.V.I.S. · ${MODE_INFO[performanceMode].label} mode`
+                      : "Neural core is booting…"
                 }
                 rows={1}
                 maxLength={5000}
@@ -598,9 +789,15 @@ function App() {
               </button>
             </form>
 
-            <p className="composer-hint">
-              No AI API key. Model inference runs locally in the browser. /clear · /load · /youtube · /github · /search query
-            </p>
+            <div className="composer-footer">
+              <span>LOCAL AI</span>
+              <i />
+              <span>{backend}</span>
+              <i />
+              <span>{MODE_INFO[performanceMode].label.toUpperCase()}</span>
+              <i />
+              <span>NO API KEY</span>
+            </div>
           </div>
         </section>
       </main>
