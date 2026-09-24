@@ -265,7 +265,7 @@ export async function buildRemotePlan(
   goal: string,
   mode: PerformanceMode,
   personality: Personality
-) {
+): Promise<{ goal: string; steps: string[] }> {
   const cleanGoal = goal.trim().slice(0, 1800);
   if (!cleanGoal) throw new Error("Agent goal is empty.");
 
@@ -309,11 +309,13 @@ Personality mode: ${personality}.`
     .filter((line: string) => line.length >= 4 && line.length <= 220)
     .slice(0, 8);
 
+  const uniqueSteps: string[] = Array.from(new Set<string>(steps));
+
   return {
     goal: cleanGoal,
     steps:
-      steps.length >= 2
-        ? Array.from(new Set(steps))
+      uniqueSteps.length >= 2
+        ? uniqueSteps
         : [
             `Define the exact outcome for: ${cleanGoal.slice(0, 120)}`,
             "Gather the information or inputs needed.",
