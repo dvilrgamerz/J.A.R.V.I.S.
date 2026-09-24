@@ -198,12 +198,43 @@ function newSession(messages: Message[] = [starterMessage]): Session {
   };
 }
 
-function initialSessions(): Session[] {
-  const stored = readStored<Session[]>("jarvis.sessions.v3", []);
-  if (stored.length) return stored;
+function migrateLegacyMessages(messages: Message[]) {
+  const cleaned = messages.filter((message) => {
+    if (message.role !== "assistant") return true;
 
-  const legacyMessages = readStored<Message[]>("jarvis.messages", [starterMessage]);
-  return [newSession(legacyMessages.length ? legacyMessages : [starterMessage])];
+    const text = message.content.toLowerCase();
+    const legacyWelcome =
+      message.id === "welcome" ||
+      message.id === "welcome-v3" ||
+      text.includes("local browser model") ||
+      text.includes("activate the ai core") ||
+      text.includes("web core online");
+
+    return !legacyWelcome;
+  });
+
+  return [starterMessage, ...cleaned].slice(-80);
+}
+
+function initialSessions(): Session[] {
+  const current = readStored<Session[]>("jarvis.sessions.v4_1", []);
+  if (current.length) {
+    return current.map((session) => ({
+      ...session,
+      messages: migrateLegacyMessages(session.messages || [])
+    }));
+  }
+
+  const stored = readStored<Session[]>("jarvis.sessions.v3", []);
+  if (stored.length) {
+    return stored.map((session) => ({
+      ...session,
+      messages: migrateLegacyMessages(session.messages || [])
+    }));
+  }
+
+  const legacyMessages = readStored<Message[]>("jarvis.messages", []);
+  return [newSession(migrateLegacyMessages(legacyMessages))];
 }
 
 function formatStorage(bytes?: number) {
@@ -432,7 +463,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("jarvis.sessions.v3", JSON.stringify(sessions.slice(0, 30)));
+    localStorage.setItem("jarvis.sessions.v4_1", JSON.stringify(sessions.slice(0, 30)));
   }, [sessions]);
 
   useEffect(() => {
@@ -787,7 +818,10 @@ function App() {
     }
 
     if (normalized === "/load" || normalized === "load ai") {
-      loadModel();
+      addLocalAssistant(
+        sessionId,
+        "V4.1 Cloud is already ready. There is no local AI model to initialize or download."
+      );
       return true;
     }
 
@@ -1202,6 +1236,7 @@ function App() {
     });
 
     [
+      "jarvis.sessions.v4_1",
       "jarvis.sessions.v3",
       "jarvis.activeSession.v3",
       "jarvis.memories",
@@ -1573,44 +1608,13 @@ function App() {
           </div>
         </section>
 
-        {modelState !== "ready" || loadedModelKey !== resolvedModel ? (
-          <div className="setup-banner model-loader">
-            <div className="model-loader-copy">
-              <strong>
-                {modelState === "loading"
-                  ? `Loading ${MODEL_INFO[resolvedModel].label} model`
-                  : "V4 neural core is in standby"}
-              </strong>
-              <span>{modelStatus}</span>
-
-              {queuedPrompt && (
-                <span className="queued-command">
-                  QUEUED · {queuedPrompt.text.slice(0, 72)}
-                </span>
-              )}
-
-              {modelState === "loading" && (
-                <div className="progress-track">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${Math.round(modelProgress * 100)}%` }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <button
-              className="activate-button"
-              onClick={() => loadModel(resolvedModel)}
-              disabled={modelState === "loading"}
-            >
-              <Zap size={15} />
-              {modelState === "loading"
-                ? `${Math.round(modelProgress * 100)}%`
-                : "Initialize"}
-            </button>
+        <div className="cloud-ready-banner">
+          <div>
+            <strong>V4.1 CLOUD AI READY</strong>
+            <span>No local model download · no WebGPU inference · {REMOTE_MODEL_NAME}</span>
           </div>
-        ) : null}
+          <span className="cloud-ready-dot" />
+        </div>
 
         <section className="v3-attachments">
           <input
