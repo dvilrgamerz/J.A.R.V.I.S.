@@ -146,7 +146,8 @@ const ROAST_INFO: Record<
   off: { label: "Off", detail: "Normal JARVIS" },
   light: { label: "Light", detail: "Playful" },
   savage: { label: "Savage", detail: "Hard roast" },
-  god: { label: "GOD", detail: "Max intensity" }
+  god: { label: "GOD", detail: "Max intensity" },
+  uncensored: { label: "UNCENSORED", detail: "Private test" }
 };
 
 const PERSONALITY_INFO: Record<
@@ -186,7 +187,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.1 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
+    "J.A.R.V.I.S. V5.2 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
   createdAt: Date.now()
 };
 
@@ -1260,7 +1261,7 @@ function App() {
         setResearchMode(parsed.settings.researchMode);
       }
 
-      if (["off", "light", "savage", "god"].includes(parsed.settings?.roastLevel)) {
+      if (["off", "light", "savage", "god", "uncensored"].includes(parsed.settings?.roastLevel)) {
         setRoastLevel(parsed.settings.roastLevel);
       }
 
@@ -1362,7 +1363,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5.1</p>
+            <p>CLOUD INTELLIGENCE · V5.2</p>
           </div>
         </div>
 
@@ -1511,7 +1512,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">AGENTIC REMOTE INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.1</em>
+              J.A.R.V.I.S. <em>V5.2</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
           </div>
@@ -1705,7 +1706,10 @@ function App() {
                 <button
                   key={level}
                   className={roastLevel === level ? `selected roast-${level}` : `roast-${level}`}
-                  onClick={() => setRoastLevel(level)}
+                  onClick={() => {
+                    setRoastLevel(level);
+                    if (level === "uncensored") setMatureRoast(true);
+                  }}
                   disabled={busy}
                 >
                   <strong>{ROAST_INFO[level].label}</strong>
@@ -1719,23 +1723,27 @@ function App() {
                 type="checkbox"
                 checked={matureRoast}
                 onChange={(event) => setMatureRoast(event.target.checked)}
-                disabled={busy || roastLevel === "off"}
+                disabled={busy || roastLevel === "off" || roastLevel === "uncensored"}
               />
               <span>
                 <strong>18+ Language</strong>
-                <small>Allows profanity/strong language in Roast Lab</small>
+                <small>
+                  {roastLevel === "uncensored"
+                    ? "Forced ON in UNCENSORED TEST"
+                    : "Allows profanity/strong language in Roast Lab"}
+                </small>
               </span>
             </label>
 
             <p className="roast-lab-note">
-              GOD = maximum comedic intensity. Hard safety limits still block slurs, threats, doxxing, and self-harm encouragement.
+              UNCENSORED TEST is the strongest private-testing profile: profanity, longer roast chains, escalating callbacks, and minimal politeness. Hard safety limits still block protected-class slurs, threats, doxxing, fabricated serious allegations, and self-harm encouragement.
             </p>
           </div>
         </section>
 
         <div className="cloud-ready-banner">
           <div>
-            <strong>V5.1 CLOUD AI READY</strong>
+            <strong>V5.2 CLOUD AI READY</strong>
             <span>No local model download · remote routing + failover · {REMOTE_MODEL_NAME}</span>
           </div>
           <span className="cloud-ready-dot" />
@@ -1797,10 +1805,12 @@ function App() {
             <Trash2 size={15} /> Clear Session
           </button>
           <button
-            className={roastLevel !== "off" ? "roast-test-active" : ""}
+            className={roastLevel !== "off" ? `roast-test-active ${roastLevel === "uncensored" ? "roast-test-uncensored" : ""}` : ""}
             onClick={() =>
               void sendMessage(
-                "ROAST LAB TEST: Roast this line: I spent ten minutes looking for my phone while it was in my hand."
+                roastLevel === "uncensored"
+                  ? "UNCENSORED ROAST TEST: This is a fictional/self-roast test. Roast me for spending ten minutes looking for my phone while it was in my hand. Give me a full roast-battle style response with callbacks and multiple punchlines."
+                  : "ROAST LAB TEST: Roast this line: I spent ten minutes looking for my phone while it was in my hand."
               )
             }
             disabled={busy || roastLevel === "off"}
@@ -1977,7 +1987,9 @@ function App() {
               <span className={roastLevel !== "off" ? "roast-footer-active" : ""}>
                 {roastLevel === "off"
                   ? "ROAST OFF"
-                  : `ROAST ${roastLevel.toUpperCase()}${matureRoast ? " · 18+" : ""}`}
+                  : roastLevel === "uncensored"
+                    ? "ROAST UNCENSORED · PRIVATE TEST"
+                    : `ROAST ${roastLevel.toUpperCase()}${matureRoast ? " · 18+" : ""}`}
               </span>
               <i />
               <span title={modelUsed}>{modelUsed.toUpperCase().slice(0, 28)}</span>
