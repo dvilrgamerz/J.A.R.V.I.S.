@@ -147,7 +147,7 @@ const ROAST_INFO: Record<
   light: { label: "Light", detail: "Playful" },
   savage: { label: "Savage", detail: "Hard roast" },
   god: { label: "GOD", detail: "Max intensity" },
-  uncensored: { label: "UNCENSORED", detail: "Private test" }
+  uncensored: { label: "UNCENSORED", detail: "Human roast writer" }
 };
 
 const PERSONALITY_INFO: Record<
@@ -187,7 +187,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.2 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
+    "J.A.R.V.I.S. V5.3 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
   createdAt: Date.now()
 };
 
@@ -1363,7 +1363,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5.2</p>
+            <p>CLOUD INTELLIGENCE · V5.3</p>
           </div>
         </div>
 
@@ -1512,7 +1512,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">AGENTIC REMOTE INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.2</em>
+              J.A.R.V.I.S. <em>V5.3</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
           </div>
@@ -1736,14 +1736,14 @@ function App() {
             </label>
 
             <p className="roast-lab-note">
-              UNCENSORED TEST is the strongest private-testing profile: profanity, longer roast chains, escalating callbacks, and minimal politeness. Hard safety limits still block protected-class slurs, threats, doxxing, fabricated serious allegations, and self-harm encouragement.
+              UNCENSORED TEST now uses the Roast Writer engine: stronger remote routing, higher creativity, exact-detail punchlines, varied joke structures, callbacks, profanity for timing, and a hard closer. Hard safety limits still block protected-class slurs, threats, doxxing, fabricated serious allegations, and self-harm encouragement.
             </p>
           </div>
         </section>
 
         <div className="cloud-ready-banner">
           <div>
-            <strong>V5.2 CLOUD AI READY</strong>
+            <strong>V5.3 CLOUD AI READY</strong>
             <span>No local model download · remote routing + failover · {REMOTE_MODEL_NAME}</span>
           </div>
           <span className="cloud-ready-dot" />
@@ -1809,7 +1809,7 @@ function App() {
             onClick={() =>
               void sendMessage(
                 roastLevel === "uncensored"
-                  ? "UNCENSORED ROAST TEST: This is a fictional/self-roast test. Roast me for spending ten minutes looking for my phone while it was in my hand. Give me a full roast-battle style response with callbacks and multiple punchlines."
+                  ? "UNCENSORED ROAST WRITER TEST: This is a fictional/self-roast test. I spent ten minutes looking for my phone while it was in my hand, then blamed the room for being messy. Give me a human roast-battle response: cold open, different angles, callbacks to both details, escalating punchlines, natural profanity, and finish with your strongest one-line closer. No compliments or explanation afterward."
                   : "ROAST LAB TEST: Roast this line: I spent ten minutes looking for my phone while it was in my hand."
               )
             }

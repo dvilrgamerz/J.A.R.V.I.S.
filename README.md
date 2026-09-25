@@ -1,6 +1,24 @@
-# J.A.R.V.I.S. Web AI V5.2 Cloud
+# J.A.R.V.I.S. Web AI V5.3 Cloud
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.3 Roast Writer
+
+V5.3 focuses on making GOD and UNCENSORED Roast Lab responses feel less like generic AI insults and more like human roast-battle writing.
+
+Changes:
+- GOD/UNCENSORED automatically prefer the stronger remote model route when available
+- higher roast-only creativity settings
+- larger roast context window for callbacks
+- 8-16 punchline target when enough material exists
+- cold-open, angle changes, callbacks, reversals, and strong closer guidance
+- exact-detail premise mining from the user's wording
+- natural profanity cadence instead of stuffing profanity into every line
+- avoids common AI-roast clichés and repetitive sentence templates
+- no post-roast explanation, reassurance, compliment, or "all jokes aside" unless requested
+- still keeps the existing hard safety boundaries
+
+Research Mode should normally remain **Off** for roast testing unless the roast specifically needs current web information.
 
 ## V5.2 Roast Lab
 

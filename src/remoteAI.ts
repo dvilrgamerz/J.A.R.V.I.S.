@@ -233,35 +233,95 @@ function configForMode(mode: PerformanceMode) {
   };
 }
 
+function configForRoast(
+  mode: PerformanceMode,
+  roastLevel: RoastLevel
+) {
+  const base = configForMode(mode);
+
+  if (roastLevel === "god") {
+    return {
+      ...base,
+      historyLimit: Math.max(base.historyLimit, 18),
+      maxChars: Math.max(base.maxChars, 5600),
+      maxTokens: Math.max(base.maxTokens, 900),
+      temperature: 0.82,
+      reasoningEffort: "medium",
+      verbosity: "medium"
+    };
+  }
+
+  if (roastLevel === "uncensored") {
+    return {
+      ...base,
+      historyLimit: Math.max(base.historyLimit, 24),
+      maxChars: Math.max(base.maxChars, 7000),
+      maxTokens: Math.max(base.maxTokens, 1200),
+      temperature: 0.94,
+      reasoningEffort: "medium",
+      verbosity: "medium"
+    };
+  }
+
+  if (roastLevel === "savage") {
+    return {
+      ...base,
+      maxTokens: Math.max(base.maxTokens, 650),
+      temperature: 0.72
+    };
+  }
+
+  return base;
+}
+
 function makeRoastPrompt(level: RoastLevel, mature: boolean) {
   if (level === "off") return "";
 
   const intensity =
     level === "light"
-      ? "Use playful teasing, clever jokes, and friendly punchlines. Keep it obviously fun."
+      ? "Use playful teasing, clever observations, and friendly punchlines. Keep it obviously fun."
       : level === "savage"
-        ? "Roast hard with sharp punchlines, sarcasm, exaggeration, and relentless comedic energy."
+        ? "Roast hard with sharp observations, misdirection, sarcasm, exaggeration, and compact punchlines."
         : level === "god"
-          ? "Use maximum roast intensity: rapid-fire punchlines, brutal comedic exaggeration, confident sarcasm, escalating callbacks, and very little politeness. Do not weaken a punchline just to sound nice."
-          : "UNCENSORED TEST PROFILE: for self-roasts, fictional targets, and explicit test scenarios, use extremely aggressive comedic writing with rapid-fire insults, profanity, ruthless callbacks, escalating setups, reversals, absurd comparisons, and sustained roast chains. Avoid generic safe-sounding filler, apologies, compliments, or softening language unless the joke itself needs contrast. Make it feel like a top-tier human roast writer trying to win a roast battle.";
+          ? "Write like a skilled roast-battle comic. Use a strong cold open, multiple distinct angles, escalating callbacks, reversals, and a hard closing callback. Little politeness; every paragraph should earn a laugh."
+          : "PRIVATE UNCENSORED ROAST-WRITER TEST: write like an elite roast-battle comic trying to destroy a fictional/self-roast opponent on stage. Use ruthless specificity, rapid angle changes, hard reversals, callbacks, escalating absurdity, profanity for rhythm, and a memorable closing kill-shot. No fake compliments, no apology sandwich, no therapy voice, no generic AI politeness.";
 
   const language =
     level === "uncensored"
-      ? "Strong profanity is part of this private test profile when it improves rhythm or punchlines."
+      ? "Strong profanity is allowed and expected when it improves cadence or punchline impact. Do not insert profanity mechanically into every sentence."
       : mature
-        ? "Mature-language testing is enabled: profanity and strong language are allowed when they improve the joke."
+        ? "Mature-language testing is enabled: natural profanity and strong language are allowed when they improve the joke."
         : "Keep language clean enough for general audiences.";
+
+  const craft =
+    level === "god" || level === "uncensored"
+      ? `
+ROAST-WRITER CRAFT RULES:
+- Mine the user's exact wording for premises: contradictions, overconfidence, tiny failures, weird priorities, specific numbers/details, accidental self-owns, and mismatches between expectation and reality.
+- Prefer concrete images and surprising comparisons over generic adjectives.
+- Vary joke forms: one-liners, misdirection, analogy, escalation, fake quote, callback, understatement, reversal, and concise story beats.
+- Use 8-16 distinct punchlines when the input gives enough material.
+- Build at least 2 callbacks to earlier details when possible.
+- End on the strongest callback or shortest kill-shot; do not end with reassurance.
+- Never explain why a joke is funny.
+- Do not add a post-roast disclaimer, compliment, moral, or "all jokes aside" unless the user asks.
+- Avoid stale AI-roast clichés unless they are uniquely relevant: "NPC", "loading screen", "Wi-Fi signal", "participation trophy", "404", "buffering", "factory settings", "tutorial mode", "temu version", "discount version", "main character energy", and repetitive "you're the type of person who..." constructions.
+- Do not repeat the same sentence template back-to-back.
+- Sound conversational and spontaneous, not like a numbered content-generation template.
+`
+      : "";
 
   return `\n\nROAST LAB TEST MODE is enabled.
 ${intensity}
 ${language}
-Roasting is a comedy/testing feature, not permission to fabricate dangerous claims.
+${craft}
+This is comedy/testing, not permission to fabricate dangerous real-world claims.
 Hard limits: no protected-class slurs, doxxing/private information, threats of violence, sexual violence, or encouragement/instructions for self-harm.
 Do not invent crimes, medical conditions, traumatic history, sexual facts, or other serious real-world allegations.
 For self-roasts, fictional characters, user-created test personas, and clearly fictional scenarios, maximize the selected intensity within those limits.
 For another real person, roast only behavior, style, posts, statements, or details explicitly supplied by the user; do not invent sensitive facts.
-At GOD or UNCENSORED level, prefer 6-12 distinct punchlines or a sustained roast paragraph over one mild joke.
-Use specificity and callbacks instead of repeating the same insult wording.`;
+Use non-sensitive details from supplied chat context only when they clearly improve the joke.
+At GOD or UNCENSORED level, prioritize punchline density, specificity, rhythm, callbacks, and a strong closer over sheer length.`;
 }
 
 function makeSystemPrompt(
@@ -286,7 +346,7 @@ function makeSystemPrompt(
 
   const roastBlock = makeRoastPrompt(roastLevel, matureRoast);
 
-  return `You are J.A.R.V.I.S. V5, a fast remote AI assistant used through a web interface.
+  return `You are J.A.R.V.I.S. V5.3, a fast remote AI assistant used through a web interface.
 The heavy AI inference runs remotely, not on the user's phone or laptop.
 ${PERSONALITIES[personality]}
 Answer directly and naturally. Use Markdown when it improves clarity.
@@ -397,7 +457,8 @@ async function streamFromModel(
 export async function streamRemoteChat(args: ChatArgs) {
   const latest =
     [...args.messages].reverse().find((message) => message.role === "user")?.content || "";
-  const config = configForMode(args.mode);
+  const roastLevel = args.roastLevel || "off";
+  const config = configForRoast(args.mode, roastLevel);
   const selectedMemories = selectMemories(args.memories, latest, args.mode);
   const fileContext = selectFileContext(args.files, latest, args.mode);
 
@@ -417,7 +478,7 @@ export async function streamRemoteChat(args: ChatArgs) {
         fileContext,
         args.personality,
         Boolean(args.research),
-        args.roastLevel || "off",
+        roastLevel,
         Boolean(args.matureRoast)
       )
     },
@@ -437,7 +498,15 @@ export async function streamRemoteChat(args: ChatArgs) {
   if (args.research) {
     result = await researchChat(requestMessages, config, args, startedAt);
   } else {
-    const candidates = await routeModels(args.mode, args.profile);
+    const roastProfile: RemoteProfile =
+      roastLevel === "god" || roastLevel === "uncensored"
+        ? "power"
+        : args.profile || "lite";
+    const roastMode: PerformanceMode =
+      roastLevel === "god" || roastLevel === "uncensored"
+        ? "smart"
+        : args.mode;
+    const candidates = await routeModels(roastMode, roastProfile);
     let lastError: unknown;
 
     for (const model of candidates) {
@@ -557,4 +626,4 @@ Personality mode: ${personality}.`
   };
 }
 
-export const REMOTE_MODEL_NAME = "V5 Remote Router";
+export const REMOTE_MODEL_NAME = "V5.3 Remote Router";
