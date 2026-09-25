@@ -8,7 +8,7 @@ import {
   useState
 } from "react";
 import MarkdownMessage from "./MarkdownMessage";
-import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat, type RoastLevel } from "./remoteAI";
+import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat, warmRemoteAI, type RoastLevel } from "./remoteAI";
 import {
   ArrowDown,
   ArrowUp,
@@ -195,7 +195,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.6 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
+    "J.A.R.V.I.S. V5.6.1 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
   createdAt: Date.now()
 };
 
@@ -407,7 +407,9 @@ function App() {
   const [roastLevel, setRoastLevel] = useState<RoastLevel>(() =>
     readStored<RoastLevel>("jarvis.roastLevel.v5_5", "off")
   );
-  const [modelUsed, setModelUsed] = useState("J.A.R.V.I.S. Core");
+  const [modelUsed, setModelUsed] = useState("J.A.R.V.I.S. Adaptive Core");
+  const [coreIntent, setCoreIntent] = useState("ADAPTIVE");
+  const [routerWarm, setRouterWarm] = useState(false);
   const [userScrolledAway, setUserScrolledAway] = useState(false);
   const [permissions, setPermissions] = useState<PermissionState>(() =>
     readStored<PermissionState>("jarvis.permissions.v4", {
@@ -1091,7 +1093,7 @@ function App() {
         mode: resolvedMode,
         profile: resolvedModel,
         adaptive: modelPreference === "auto" && performancePreference === "auto",
-        personality;
+        personality,
         roastLevel,
         research: researchMode,
         shouldStop: () => stopRequestedRef.current,
@@ -1131,6 +1133,7 @@ function App() {
       setEstimatedTokens(result.estimatedTokens);
       setTokensPerSecond(result.tokensPerSecond);
       setModelUsed(result.routeLabel);
+      setCoreIntent((result.routeIntent || "adaptive").toUpperCase());
       setBackend(result.researchUsed ? "JARVIS RESEARCH" : "JARVIS CLOUD");
 
       if (!result.stopped) {
@@ -1389,8 +1392,15 @@ function App() {
 
   function startJarvis() {
     setBootProgress(0);
-    setModelStatus("Initializing J.A.R.V.I.S. Core");
+    setRouterWarm(false);
+    setCoreIntent("WARMING");
+    setModelStatus("Initializing J.A.R.V.I.S. Adaptive Core");
     setPowerState("booting");
+
+    void warmRemoteAI().then((warmed) => {
+      setRouterWarm(warmed);
+      setCoreIntent("ADAPTIVE");
+    });
   }
 
   function shutDownJarvis() {
@@ -1440,7 +1450,7 @@ function App() {
           <div className="power-brand">
             <span className="power-brand-line" />
             <strong>J.A.R.V.I.S.</strong>
-            <small>V5.6 · INTELLIGENCE SYSTEM</small>
+            <small>V5.6.1 · ADAPTIVE INTELLIGENCE</small>
           </div>
 
           <div className="power-core-stage">
@@ -1493,6 +1503,7 @@ function App() {
               <div className="power-terminal" aria-hidden="true">
                 <span className={bootProgress >= 18 ? "active" : ""}>[CORE] intelligence router online</span>
                 <span className={bootProgress >= 40 ? "active" : ""}>[MEM] context matrix synchronized</span>
+                <span className={routerWarm || bootProgress >= 52 ? "active" : ""}>[AI] adaptive route table ${routerWarm ? "prewarmed" : "warming"}</span>
                 <span className={bootProgress >= 62 ? "active" : ""}>[NET] cloud link established</span>
                 <span className={bootProgress >= 82 ? "active" : ""}>[SYS] voice + tools calibrated</span>
                 <span className={bootProgress >= 96 ? "active" : ""}>[OK] all systems nominal</span>
@@ -1521,7 +1532,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5.6</p>
+            <p>ADAPTIVE INTELLIGENCE · V5.6.1</p>
           </div>
         </div>
 
@@ -1673,7 +1684,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">FRIENDLY CLOUD INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.6</em>
+              J.A.R.V.I.S. <em>V5.6.1</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
             <div className="v54-command-rail" aria-hidden="true">
@@ -1755,7 +1766,7 @@ function App() {
 
         <section className="v55-hero-stage">
           <div className="v55-hero-message">
-            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.6</span>
+            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.6.1</span>
             <h3>Helpful, creative, and ready to build with you.</h3>
             <p>
               A family-friendly AI command center for learning, coding, planning,
@@ -1920,10 +1931,15 @@ function App() {
 
         </section>
 
-        <div className="cloud-ready-banner">
+        <div className="cloud-ready-banner v56-ready-banner">
           <div>
-            <strong>J.A.R.V.I.S. CORE ONLINE</strong>
-            <span>J.A.R.V.I.S. cloud routing · failover · {REMOTE_MODEL_NAME}</span>
+            <strong>J.A.R.V.I.S. ADAPTIVE CORE ONLINE</strong>
+            <span>Intent-aware routing · failover · {REMOTE_MODEL_NAME}</span>
+          </div>
+          <div className="v56-core-chips">
+            <span><BrainCircuit size={11} /> {coreIntent}</span>
+            <span><Zap size={11} /> FAST STREAM</span>
+            <span><Check size={11} /> {routerWarm ? "PREWARMED" : "READY"}</span>
           </div>
           <span className="cloud-ready-dot" />
         </div>
@@ -2172,6 +2188,8 @@ function App() {
               <span>{researchMode ? "RESEARCH" : backend}</span>
               <i />
               <span>{roastLevel === "off" ? "ROAST OFF" : `ROAST ${ROAST_INFO[roastLevel].label.toUpperCase()}`}</span>
+              <i />
+              <span>{coreIntent} INTENT</span>
               <i />
               <span title={modelUsed}>{modelUsed.toUpperCase().slice(0, 28)}</span>
               <i />
