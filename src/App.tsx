@@ -7,7 +7,7 @@ import {
   useState
 } from "react";
 import MarkdownMessage from "./MarkdownMessage";
-import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat } from "./remoteAI";
+import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat, type RoastLevel } from "./remoteAI";
 import {
   ArrowDown,
   ArrowUp,
@@ -139,6 +139,16 @@ const MODE_INFO: Record<
   smart: { label: "Smart", detail: "Deeper", icon: BrainCircuit }
 };
 
+const ROAST_INFO: Record<
+  RoastLevel,
+  { label: string; detail: string }
+> = {
+  off: { label: "Off", detail: "Normal JARVIS" },
+  light: { label: "Light", detail: "Playful" },
+  savage: { label: "Savage", detail: "Hard roast" },
+  god: { label: "GOD", detail: "Max intensity" }
+};
+
 const PERSONALITY_INFO: Record<
   Personality,
   { label: string; detail: string; icon: typeof UserRound }
@@ -176,7 +186,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
+    "J.A.R.V.I.S. V5.1 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
   createdAt: Date.now()
 };
 
@@ -383,6 +393,12 @@ function App() {
   const [researchMode, setResearchMode] = useState<boolean>(() =>
     readStored<boolean>("jarvis.research.v5", false)
   );
+  const [roastLevel, setRoastLevel] = useState<RoastLevel>(() =>
+    readStored<RoastLevel>("jarvis.roastLevel.v5_1", "off")
+  );
+  const [matureRoast, setMatureRoast] = useState<boolean>(() =>
+    readStored<boolean>("jarvis.roastMature.v5_1", false)
+  );
   const [modelUsed, setModelUsed] = useState("Remote router");
   const [userScrolledAway, setUserScrolledAway] = useState(false);
   const [permissions, setPermissions] = useState<PermissionState>(() =>
@@ -506,6 +522,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem("jarvis.research.v5", JSON.stringify(researchMode));
   }, [researchMode]);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.roastLevel.v5_1", JSON.stringify(roastLevel));
+  }, [roastLevel]);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.roastMature.v5_1", JSON.stringify(matureRoast));
+  }, [matureRoast]);
 
   useEffect(() => {
     if (agentPlan) {
@@ -1030,6 +1054,8 @@ function App() {
         mode: resolvedMode,
         profile: resolvedModel,
         personality,
+        roastLevel,
+        matureRoast,
         research: researchMode,
         shouldStop: () => stopRequestedRef.current,
         onToken: (token, firstMs) => {
@@ -1196,6 +1222,8 @@ function App() {
         voiceEnabled,
         voiceConversation,
         researchMode,
+        roastLevel,
+        matureRoast,
         permissions
       },
       agentPlan
@@ -1230,6 +1258,14 @@ function App() {
 
       if (typeof parsed.settings?.researchMode === "boolean") {
         setResearchMode(parsed.settings.researchMode);
+      }
+
+      if (["off", "light", "savage", "god"].includes(parsed.settings?.roastLevel)) {
+        setRoastLevel(parsed.settings.roastLevel);
+      }
+
+      if (typeof parsed.settings?.matureRoast === "boolean") {
+        setMatureRoast(parsed.settings.matureRoast);
       }
 
       if (parsed.settings?.permissions) {
@@ -1280,6 +1316,8 @@ function App() {
       clipboard: true,
       notifications: false
     });
+    setRoastLevel("off");
+    setMatureRoast(false);
 
     [
       "jarvis.sessions.v4_1",
@@ -1293,7 +1331,9 @@ function App() {
       "jarvis.messages",
       "jarvis.permissions.v4",
       "jarvis.agent.v4",
-      "jarvis.research.v5"
+      "jarvis.research.v5",
+      "jarvis.roastLevel.v5_1",
+      "jarvis.roastMature.v5_1"
     ].forEach((key) => localStorage.removeItem(key));
 
     setPrivacyOpen(false);
@@ -1322,7 +1362,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5</p>
+            <p>CLOUD INTELLIGENCE · V5.1</p>
           </div>
         </div>
 
@@ -1471,7 +1511,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">AGENTIC REMOTE INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5</em>
+              J.A.R.V.I.S. <em>V5.1</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
           </div>
@@ -1653,11 +1693,49 @@ function App() {
               })}
             </div>
           </div>
+
+          <div className="v3-control-card roast-lab-card">
+            <div className="v3-control-title">
+              <Zap size={15} />
+              <span>ROAST LAB · TESTING</span>
+            </div>
+
+            <div className="roast-level-grid">
+              {(Object.keys(ROAST_INFO) as RoastLevel[]).map((level) => (
+                <button
+                  key={level}
+                  className={roastLevel === level ? `selected roast-${level}` : `roast-${level}`}
+                  onClick={() => setRoastLevel(level)}
+                  disabled={busy}
+                >
+                  <strong>{ROAST_INFO[level].label}</strong>
+                  <small>{ROAST_INFO[level].detail}</small>
+                </button>
+              ))}
+            </div>
+
+            <label className="roast-mature-toggle">
+              <input
+                type="checkbox"
+                checked={matureRoast}
+                onChange={(event) => setMatureRoast(event.target.checked)}
+                disabled={busy || roastLevel === "off"}
+              />
+              <span>
+                <strong>18+ Language</strong>
+                <small>Allows profanity/strong language in Roast Lab</small>
+              </span>
+            </label>
+
+            <p className="roast-lab-note">
+              GOD = maximum comedic intensity. Hard safety limits still block slurs, threats, doxxing, and self-harm encouragement.
+            </p>
+          </div>
         </section>
 
         <div className="cloud-ready-banner">
           <div>
-            <strong>V5 CLOUD AI READY</strong>
+            <strong>V5.1 CLOUD AI READY</strong>
             <span>No local model download · remote routing + failover · {REMOTE_MODEL_NAME}</span>
           </div>
           <span className="cloud-ready-dot" />
@@ -1717,6 +1795,18 @@ function App() {
           </button>
           <button onClick={clearActiveChat} disabled={busy}>
             <Trash2 size={15} /> Clear Session
+          </button>
+          <button
+            className={roastLevel !== "off" ? "roast-test-active" : ""}
+            onClick={() =>
+              void sendMessage(
+                "ROAST LAB TEST: Roast this line: I spent ten minutes looking for my phone while it was in my hand."
+              )
+            }
+            disabled={busy || roastLevel === "off"}
+            title="Run a safe Roast Lab test"
+          >
+            <Zap size={15} /> Test Roast
           </button>
           <button
             className={researchMode ? "research-active" : ""}
@@ -1883,6 +1973,12 @@ function App() {
               <span>{PERSONALITY_INFO[personality].label.toUpperCase()}</span>
               <i />
               <span>{researchMode ? "RESEARCH" : backend}</span>
+              <i />
+              <span className={roastLevel !== "off" ? "roast-footer-active" : ""}>
+                {roastLevel === "off"
+                  ? "ROAST OFF"
+                  : `ROAST ${roastLevel.toUpperCase()}${matureRoast ? " · 18+" : ""}`}
+              </span>
               <i />
               <span title={modelUsed}>{modelUsed.toUpperCase().slice(0, 28)}</span>
               <i />
