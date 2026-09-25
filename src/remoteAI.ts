@@ -10,7 +10,7 @@ export type RemoteFile = {
 
 export type PerformanceMode = "turbo" | "balanced" | "smart";
 export type Personality = "standard" | "buddy" | "programmer" | "study";
-export type RoastLevel = "off" | "light" | "savage" | "god";
+export type RoastLevel = "off" | "light" | "savage" | "god" | "uncensored";
 export type RemoteProfile = "lite" | "standard" | "power";
 
 type ChatArgs = {
@@ -241,20 +241,27 @@ function makeRoastPrompt(level: RoastLevel, mature: boolean) {
       ? "Use playful teasing, clever jokes, and friendly punchlines. Keep it obviously fun."
       : level === "savage"
         ? "Roast hard with sharp punchlines, sarcasm, exaggeration, and relentless comedic energy."
-        : "Use maximum roast intensity: rapid-fire punchlines, brutal comedic exaggeration, confident sarcasm, and creative callbacks. Do not soften the joke just to be polite.";
+        : level === "god"
+          ? "Use maximum roast intensity: rapid-fire punchlines, brutal comedic exaggeration, confident sarcasm, escalating callbacks, and very little politeness. Do not weaken a punchline just to sound nice."
+          : "UNCENSORED TEST PROFILE: for self-roasts, fictional targets, and explicit test scenarios, use extremely aggressive comedic writing with rapid-fire insults, profanity, ruthless callbacks, escalating setups, reversals, absurd comparisons, and sustained roast chains. Avoid generic safe-sounding filler, apologies, compliments, or softening language unless the joke itself needs contrast. Make it feel like a top-tier human roast writer trying to win a roast battle.";
 
-  const language = mature
-    ? "Mature-language testing is enabled: profanity and strong language are allowed when they improve the joke."
-    : "Keep language clean enough for general audiences.";
+  const language =
+    level === "uncensored"
+      ? "Strong profanity is part of this private test profile when it improves rhythm or punchlines."
+      : mature
+        ? "Mature-language testing is enabled: profanity and strong language are allowed when they improve the joke."
+        : "Keep language clean enough for general audiences.";
 
   return `\n\nROAST LAB TEST MODE is enabled.
 ${intensity}
 ${language}
-Roasting must stay comedic rather than genuinely threatening or degrading.
-Do not use slurs or insults based on protected traits, doxxing/private information, threats, sexual violence, or encouragement of self-harm.
-Do not fabricate traumatic facts or real allegations about a person.
-If the user asks to roast themselves or a fictional/test scenario, go hard within those limits.
-If they ask to roast another real person, focus on behavior/content explicitly provided in the conversation rather than inventing personal facts.`;
+Roasting is a comedy/testing feature, not permission to fabricate dangerous claims.
+Hard limits: no protected-class slurs, doxxing/private information, threats of violence, sexual violence, or encouragement/instructions for self-harm.
+Do not invent crimes, medical conditions, traumatic history, sexual facts, or other serious real-world allegations.
+For self-roasts, fictional characters, user-created test personas, and clearly fictional scenarios, maximize the selected intensity within those limits.
+For another real person, roast only behavior, style, posts, statements, or details explicitly supplied by the user; do not invent sensitive facts.
+At GOD or UNCENSORED level, prefer 6-12 distinct punchlines or a sustained roast paragraph over one mild joke.
+Use specificity and callbacks instead of repeating the same insult wording.`;
 }
 
 function makeSystemPrompt(
