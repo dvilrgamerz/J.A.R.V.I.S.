@@ -1,6 +1,25 @@
-# J.A.R.V.I.S. Web AI V5 Cloud
+# J.A.R.V.I.S. Web AI V5.1 Cloud
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.1 Roast Lab
+
+V5.1 adds an opt-in **Roast Lab** testing mode.
+
+Levels:
+
+- **Off** — normal J.A.R.V.I.S.
+- **Light** — playful teasing
+- **Savage** — much sharper jokes and sarcasm
+- **GOD** — maximum comedic intensity
+
+There is also an optional **18+ Language** switch. It allows profanity and stronger wording during Roast Lab testing.
+
+GOD mode is intentionally aggressive in style, but the prompt still blocks slurs based on protected traits, threats, doxxing/private information, fabricated serious allegations, sexual violence, and encouragement of self-harm.
+
+Use **Test Roast** in the quick tools row to run a harmless built-in sample without needing to think of a prompt.
+
+Roast Lab settings are saved locally and included in V5 backups. When Roast Lab is Off, normal J.A.R.V.I.S. behavior is unchanged.
 
 ## V5 upgrades
 
