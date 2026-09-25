@@ -1,8 +1,8 @@
 {
   "name": "jarvis-web-ai",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "private": true,
-  "description": "J.A.R.V.I.S. V5 Cloud: responsive remote AI assistant with model routing, failover, live web research, agent planning, memory/file retrieval, voice and tools.",
+  "description": "J.A.R.V.I.S. V5.1 Cloud: responsive remote AI with routing, failover, Research mode, Agent Workspace and selectable Roast Lab testing.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
