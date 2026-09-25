@@ -307,7 +307,7 @@ function makeSystemPrompt(
 
   const roastBlock = makeRoastPrompt(roastLevel);
 
-  return `You are J.A.R.V.I.S. V5.5.1, a fast remote AI assistant used through a web interface.
+  return `You are J.A.R.V.I.S. V5.5.2, a fast remote AI assistant used through a web interface.
 The heavy AI inference runs remotely, not on the user's phone or laptop.
 ${PERSONALITIES[personality]}
 Answer directly and naturally. Use Markdown when it improves clarity.${roastBlock}
@@ -584,4 +584,4 @@ Personality mode: ${personality}.`
   };
 }
 
-export const REMOTE_MODEL_NAME = "V5.5.1 Roast Router";
+export const REMOTE_MODEL_NAME = "J.A.R.V.I.S. Core Router";

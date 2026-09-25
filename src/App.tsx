@@ -93,6 +93,8 @@ type AgentPlan = {
   steps: AgentStep[];
   createdAt: number;
 };
+type PowerState = "off" | "booting" | "online" | "shutting";
+
 type PermissionState = {
   microphone: boolean;
   files: boolean;
@@ -105,27 +107,27 @@ const MODEL_INFO: Record<
   { label: string; detail: string; estimate: string; icon: typeof Rocket }
 > = {
   auto: {
-    label: "Auto Cloud",
-    detail: "Fast remote route",
-    estimate: "No device AI",
+    label: "J.A.R.V.I.S. Auto",
+    detail: "Adaptive Core",
+    estimate: "Cloud Core",
     icon: WandSparkles
   },
   lite: {
-    label: "Fast Cloud",
-    detail: "GPT-5.6 Luna",
-    estimate: "Remote",
+    label: "J.A.R.V.I.S. Fast",
+    detail: "Fast Core",
+    estimate: "Cloud Core",
     icon: Rocket
   },
   standard: {
-    label: "Balanced Cloud",
-    detail: "GPT-5.6 Luna",
-    estimate: "Remote",
+    label: "J.A.R.V.I.S. Balanced",
+    detail: "Balanced Core",
+    estimate: "Cloud Core",
     icon: Gauge
   },
   power: {
-    label: "Smart Cloud",
-    detail: "GPT-5.6 Luna",
-    estimate: "Remote",
+    label: "J.A.R.V.I.S. Smart",
+    detail: "Smart Core",
+    estimate: "Cloud Core",
     icon: BrainCircuit
   }
 };
@@ -180,11 +182,20 @@ const QUICK_PROMPTS = [
   "Give me five creative ideas"
 ];
 
+const BOOT_STEPS = [
+  "INITIALIZING J.A.R.V.I.S. CORE",
+  "SYNCING MEMORY MATRIX",
+  "LINKING CLOUD INTELLIGENCE",
+  "CALIBRATING VOICE + TOOLS",
+  "VERIFYING SECURITY SYSTEMS",
+  "J.A.R.V.I.S. ONLINE"
+];
+
 const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.5.1 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
+    "J.A.R.V.I.S. V5.5.2 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
   createdAt: Date.now()
 };
 
@@ -329,6 +340,8 @@ function convertUnit(value: number, from: string, to: string) {
 }
 
 function App() {
+  const [powerState, setPowerState] = useState<PowerState>("off");
+  const [bootProgress, setBootProgress] = useState(0);
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const [activeSessionId, setActiveSessionId] = useState(() => {
     const storedId = readStored<string>("jarvis.activeSession.v3", "");
@@ -349,8 +362,8 @@ function App() {
   const [voiceConversation, setVoiceConversation] = useState(false);
   const [modelState, setModelState] = useState<ModelState>("ready");
   const [modelProgress, setModelProgress] = useState(1);
-  const [modelStatus, setModelStatus] = useState("Remote AI ready");
-  const [backend, setBackend] = useState("REMOTE");
+  const [modelStatus, setModelStatus] = useState("J.A.R.V.I.S. Core ready");
+  const [backend, setBackend] = useState("JARVIS CLOUD");
   const [loadedModelKey, setLoadedModelKey] = useState<ModelKey | null>(null);
   const [notice, setNotice] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
@@ -394,7 +407,7 @@ function App() {
   const [roastLevel, setRoastLevel] = useState<RoastLevel>(() =>
     readStored<RoastLevel>("jarvis.roastLevel.v5_5", "off")
   );
-  const [modelUsed, setModelUsed] = useState("Remote router");
+  const [modelUsed, setModelUsed] = useState("J.A.R.V.I.S. Core");
   const [userScrolledAway, setUserScrolledAway] = useState(false);
   const [permissions, setPermissions] = useState<PermissionState>(() =>
     readStored<PermissionState>("jarvis.permissions.v4", {
@@ -478,8 +491,8 @@ function App() {
   useEffect(() => {
     setModelState("ready");
     setModelProgress(1);
-    setModelStatus("Remote AI ready");
-    setBackend("REMOTE");
+    setModelStatus("J.A.R.V.I.S. Core ready");
+    setBackend("JARVIS CLOUD");
   }, []);
 
   useEffect(() => {
@@ -521,6 +534,39 @@ function App() {
   useEffect(() => {
     localStorage.setItem("jarvis.roastLevel.v5_5", JSON.stringify(roastLevel));
   }, [roastLevel]);
+
+  useEffect(() => {
+    if (powerState !== "booting") return;
+
+    const timer = window.setInterval(() => {
+      setBootProgress((current) => Math.min(100, current + 4));
+    }, 90);
+
+    return () => window.clearInterval(timer);
+  }, [powerState]);
+
+  useEffect(() => {
+    if (powerState !== "booting" || bootProgress < 100) return;
+
+    const timer = window.setTimeout(() => {
+      setModelStatus("J.A.R.V.I.S. Core ready");
+      setBackend("JARVIS CLOUD");
+      setPowerState("online");
+    }, 520);
+
+    return () => window.clearTimeout(timer);
+  }, [powerState, bootProgress]);
+
+  useEffect(() => {
+    if (powerState !== "shutting") return;
+
+    const timer = window.setTimeout(() => {
+      setBootProgress(0);
+      setPowerState("off");
+    }, 1100);
+
+    return () => window.clearTimeout(timer);
+  }, [powerState]);
 
   useEffect(() => {
     if (agentPlan) {
@@ -629,7 +675,7 @@ function App() {
   }
 
   function unloadModel() {
-    setNotice("No AI model is loaded on this device. J.A.R.V.I.S. inference is remote.");
+    setNotice("J.A.R.V.I.S. uses cloud intelligence; no heavy AI model is loaded on this device.");
   }
 
   async function createAgentPlan() {
@@ -639,7 +685,7 @@ function App() {
     const id = crypto.randomUUID();
     setAgentPlanning(true);
     setAgentRequestId(id);
-    setNotice("Remote J.A.R.V.I.S. is building an approval-based task plan…");
+    setNotice("J.A.R.V.I.S. is building an approval-based task plan…");
 
     try {
       const result = await buildRemotePlan(goal, resolvedMode, personality);
@@ -658,7 +704,7 @@ function App() {
     } catch (error) {
       setNotice(
         error instanceof Error
-          ? `Remote AI error: ${error.message}`
+          ? `J.A.R.V.I.S. Core error: ${error.message}`
           : "Remote AI could not build the plan."
       );
     } finally {
@@ -704,8 +750,8 @@ function App() {
     setLoadedModelKey(target);
     setModelState("ready");
     setModelProgress(1);
-    setModelStatus("Remote AI ready");
-    setBackend("REMOTE");
+    setModelStatus("J.A.R.V.I.S. Core ready");
+    setBackend("JARVIS CLOUD");
     setNotice(`${MODEL_INFO[target].label} selected. AI compute stays off this device.`);
   }
 
@@ -1034,8 +1080,8 @@ function App() {
     setFirstChunkMs(undefined);
     setTotalMs(undefined);
     setModelState("ready");
-    setModelStatus("Remote AI streaming");
-    setBackend("REMOTE");
+    setModelStatus("J.A.R.V.I.S. Core active");
+    setBackend("JARVIS CLOUD");
 
     try {
       const result = await streamRemoteChat({
@@ -1083,13 +1129,21 @@ function App() {
       setFileChunksUsed(result.fileChunksUsed);
       setEstimatedTokens(result.estimatedTokens);
       setTokensPerSecond(result.tokensPerSecond);
-      setModelUsed(result.modelUsed);
-      setBackend(result.researchUsed ? "WEB + REMOTE" : "REMOTE");
+      setModelUsed(
+        result.researchUsed
+          ? "J.A.R.V.I.S. Research Core"
+          : resolvedModel === "power"
+            ? "J.A.R.V.I.S. Smart Core"
+            : resolvedModel === "standard"
+              ? "J.A.R.V.I.S. Balanced Core"
+              : "J.A.R.V.I.S. Fast Core"
+      );
+      setBackend(result.researchUsed ? "JARVIS RESEARCH" : "JARVIS CLOUD");
 
       if (!result.stopped) {
         speak(result.answer);
       } else {
-        setNotice("Remote generation stopped.");
+        setNotice("J.A.R.V.I.S. generation stopped.");
       }
     } catch (error) {
       updateSessionMessages(sessionId, (current) =>
@@ -1099,7 +1153,7 @@ function App() {
                 ...message,
                 content:
                   message.content ||
-                  "Remote AI request failed. Please try again.",
+                  "J.A.R.V.I.S. request failed. Please try again.",
                 streaming: false
               }
             : message
@@ -1107,14 +1161,14 @@ function App() {
       );
       setNotice(
         error instanceof Error
-          ? `Remote AI error: ${error.message}`
-          : "Remote AI request failed."
+          ? `J.A.R.V.I.S. Core error: ${error.message}`
+          : "J.A.R.V.I.S. request failed."
       );
     } finally {
       setBusy(false);
       setStopping(false);
       stopRequestedRef.current = false;
-      setModelStatus("Remote AI ready");
+      setModelStatus("J.A.R.V.I.S. Core ready");
     }
   }
 
@@ -1340,6 +1394,26 @@ function App() {
     event.currentTarget.style.setProperty("--v55-ry", "0deg");
   }
 
+  function startJarvis() {
+    setBootProgress(0);
+    setModelStatus("Initializing J.A.R.V.I.S. Core");
+    setPowerState("booting");
+  }
+
+  function shutDownJarvis() {
+    stopRequestedRef.current = true;
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setListening(false);
+    setVoiceConversation(false);
+    setAgentOpen(false);
+    setPermissionsOpen(false);
+    setPrivacyOpen(false);
+    setNotice("");
+    setPowerState("shutting");
+  }
+
   async function installApp() {
     if (!installPrompt) {
       setNotice("Install is not currently offered by this browser. You can still use Add to Home screen / Install app from the browser menu.");
@@ -1348,6 +1422,86 @@ function App() {
 
     await installPrompt.prompt?.();
     setInstallPrompt(null);
+  }
+
+  if (powerState !== "online") {
+    const bootIndex = Math.min(
+      BOOT_STEPS.length - 1,
+      Math.floor(bootProgress / (100 / BOOT_STEPS.length))
+    );
+    const isBooting = powerState === "booting";
+    const isShutting = powerState === "shutting";
+
+    return (
+      <div className={`jarvis-power-screen ${powerState}`}>
+        <div className="power-grid" aria-hidden="true" />
+        <div className="power-scan" aria-hidden="true" />
+        <div className="power-aurora power-aurora-a" aria-hidden="true" />
+        <div className="power-aurora power-aurora-b" aria-hidden="true" />
+
+        <div className="power-particles" aria-hidden="true">
+          <i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i />
+        </div>
+
+        <section className="power-console">
+          <div className="power-brand">
+            <span className="power-brand-line" />
+            <strong>J.A.R.V.I.S.</strong>
+            <small>V5.5.2 · INTELLIGENCE SYSTEM</small>
+          </div>
+
+          <div className="power-core-stage">
+            <div
+              className="power-progress-ring"
+              style={{
+                background: `conic-gradient(#78efff ${bootProgress * 3.6}deg, rgba(117, 230, 255, 0.08) 0deg)`
+              }}
+            >
+              <div className="power-ring-inner" />
+            </div>
+            <div className="power-orbit power-orbit-a" />
+            <div className="power-orbit power-orbit-b" />
+            <div className="power-orbit power-orbit-c" />
+
+            <button
+              type="button"
+              className="power-core-button"
+              onClick={startJarvis}
+              disabled={isBooting || isShutting}
+              aria-label="Start J.A.R.V.I.S."
+            >
+              <CirclePower size={38} />
+              <span>{isBooting ? `${bootProgress}%` : isShutting ? "OFF" : "START"}</span>
+            </button>
+          </div>
+
+          {powerState === "off" ? (
+            <div className="power-ready-copy">
+              <h1>START J.A.R.V.I.S.</h1>
+              <p>Tap the core to initialize the J.A.R.V.I.S. command system.</p>
+              <span><i /> SYSTEM READY</span>
+            </div>
+          ) : (
+            <div className={`power-loading-panel ${isShutting ? "shutdown" : ""}`}>
+              <div className="power-loading-head">
+                <span>{isShutting ? "SHUTDOWN SEQUENCE" : "BOOT SEQUENCE"}</span>
+                <strong>{isShutting ? "POWERING DOWN" : BOOT_STEPS[bootIndex]}</strong>
+              </div>
+              <div className="power-loading-track">
+                <i style={{ width: isShutting ? "100%" : `${bootProgress}%` }} />
+              </div>
+              <div className="power-checks">
+                <span className={bootProgress >= 16 ? "done" : ""}>CORE</span>
+                <span className={bootProgress >= 34 ? "done" : ""}>MEMORY</span>
+                <span className={bootProgress >= 52 ? "done" : ""}>CLOUD</span>
+                <span className={bootProgress >= 70 ? "done" : ""}>TOOLS</span>
+                <span className={bootProgress >= 88 ? "done" : ""}>SECURITY</span>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    );
   }
 
   return (
@@ -1367,7 +1521,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5.5</p>
+            <p>CLOUD INTELLIGENCE · V5.5.2</p>
           </div>
         </div>
 
@@ -1422,7 +1576,7 @@ function App() {
 
           <div className="device-tier-card">
             <span>{tier}</span>
-            <strong>{resolvedModel.toUpperCase()}</strong>
+            <strong>{MODEL_INFO[resolvedModel].detail.toUpperCase()}</strong>
             <small>{resolvedMode.toUpperCase()} INFERENCE</small>
           </div>
 
@@ -1440,7 +1594,7 @@ function App() {
             <div className="telemetry-item">
               <Gauge size={16} />
               <span>ACCELERATOR</span>
-              <strong>"REMOTE GPU"</strong>
+              <strong>"J.A.R.V.I.S. CLOUD"</strong>
             </div>
             <div className="telemetry-item">
               <HardDrive size={16} />
@@ -1510,7 +1664,7 @@ function App() {
 
         <div className="security-badge">
           <ShieldCheck size={16} />
-          <span>Remote inference · light client</span>
+          <span>J.A.R.V.I.S. cloud core · light client</span>
         </div>
       </aside>
 
@@ -1519,11 +1673,11 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">FRIENDLY CLOUD INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.5</em>
+              J.A.R.V.I.S. <em>V5.5.2</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
             <div className="v54-command-rail" aria-hidden="true">
-              <span><i />REMOTE CORE</span>
+              <span><i />J.A.R.V.I.S. CORE</span>
               <span><i />LIVE ROUTER</span>
               <span><i />SECURE CONTEXT</span>
             </div>
@@ -1580,6 +1734,15 @@ function App() {
             </button>
 
             <button
+              className="shutdown-button"
+              onClick={shutDownJarvis}
+              title="Shut down J.A.R.V.I.S."
+            >
+              <CirclePower size={16} />
+              <span>Shut Down</span>
+            </button>
+
+            <button
               className="github-button"
               onClick={() =>
                 openExternal("https://github.com/dvilrgamerz/J.A.R.V.I.S.")
@@ -1592,7 +1755,7 @@ function App() {
 
         <section className="v55-hero-stage">
           <div className="v55-hero-message">
-            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.5</span>
+            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.5.2</span>
             <h3>Helpful, creative, and ready to build with you.</h3>
             <p>
               A family-friendly AI command center for learning, coding, planning,
@@ -1676,7 +1839,7 @@ function App() {
           <div className="v3-control-card">
             <div className="v3-control-title">
               <Cpu size={15} />
-              <span>REMOTE PROFILE</span>
+              <span>J.A.R.V.I.S. CORE</span>
             </div>
 
             <div className="v3-selector">
@@ -1759,8 +1922,8 @@ function App() {
 
         <div className="cloud-ready-banner">
           <div>
-            <strong>V5.5 CLOUD AI READY</strong>
-            <span>No local model download · remote routing + failover · {REMOTE_MODEL_NAME}</span>
+            <strong>J.A.R.V.I.S. CORE ONLINE</strong>
+            <span>J.A.R.V.I.S. cloud routing · failover · {REMOTE_MODEL_NAME}</span>
           </div>
           <span className="cloud-ready-dot" />
         </div>
@@ -1854,7 +2017,7 @@ function App() {
             <Search size={15} /> Search
           </button>
           <button onClick={unloadModel} disabled={busy || agentPlanning}>
-            <Wifi size={15} /> Remote AI
+            <Wifi size={15} /> J.A.R.V.I.S. Core
           </button>
         </section>
 

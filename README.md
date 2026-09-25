@@ -1,6 +1,23 @@
-# J.A.R.V.I.S. Web AI V5.5.1 Cloud
+# J.A.R.V.I.S. Web AI V5.5.2
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.5.2 Boot System
+
+V5.5.2 turns the web app into a bootable J.A.R.V.I.S. experience.
+
+- every fresh page load starts on a **START J.A.R.V.I.S.** power screen
+- clicking Start launches a cinematic boot sequence
+- animated 3D core, orbit rings, particles, scan sweep and holographic grid
+- staged CORE / MEMORY / CLOUD / TOOLS / SECURITY checks
+- progress ring and boot status messages
+- dashboard appears only after boot completes
+- new **Shut Down** control in the main command bar
+- shutdown uses a reverse power-down / blackout animation
+- visible model/provider names are replaced with J.A.R.V.I.S. Core branding
+- Fast / Balanced / Smart / Research appear as J.A.R.V.I.S. core profiles
+
+The underlying cloud provider still performs remote inference. The J.A.R.V.I.S. naming is the product interface/route abstraction, not a claim that the project trains its own foundation model.
 
 ## V5.5.1 Roast Mode
 
@@ -76,7 +93,7 @@ V5.4 is a major visual/animation pass that keeps the remote-AI architecture inta
 
 V5 asks Puter for the currently available AI model catalogue.
 
-The router prefers fast GPT-5.6 routes for normal use and can prefer a stronger GPT-5.6 Sol route in Smart mode if Puter exposes one. If a preferred route fails before producing an answer, V5 tries another compatible remote route.
+The J.A.R.V.I.S. router uses provider-backed cloud models internally and exposes them through J.A.R.V.I.S.-branded Fast, Balanced, Smart, and Research core profiles. Provider-specific model IDs are intentionally kept out of the product UI. If a preferred route fails before producing an answer, J.A.R.V.I.S. tries another compatible remote route.
 
 The app still contains **no local LLM runtime**.
 
@@ -84,7 +101,7 @@ The app still contains **no local LLM runtime**.
 
 Turn **Research** on in the quick tools bar when you need current information.
 
-V5 uses Puter's OpenAI-compatible web-search tool with GPT-5.6 Luna. Research answers are instructed to include useful source links and separate current web findings from general model knowledge.
+V5 uses Puter's remote web-search workflow through the J.A.R.V.I.S. Research Core. Research answers are instructed to include useful source links and separate current web findings from general model knowledge.
 
 Research mode can take longer than normal chat because it performs live search.
 

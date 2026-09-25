@@ -1,7 +1,7 @@
 {
-  "name": "J.A.R.V.I.S. Web AI V5.5.1 Cloud",
+  "name": "J.A.R.V.I.S. Web AI V5.5.2",
   "short_name": "J.A.R.V.I.S.",
-  "description": "Family-friendly 3D holographic remote AI command center with opt-in comedy Roast Mode, smart routing, Research, Agent Workspace, memory, files, voice and tools.",
+  "description": "Bootable 3D holographic J.A.R.V.I.S. command center with startup/shutdown VFX, smart cloud routing, Research, Roast Mode, Agent Workspace, memory, files, voice and tools.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
