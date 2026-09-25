@@ -181,6 +181,29 @@ Static hosting works with Netlify/Vercel-style platforms.
 
 The frontend loads Puter.js at runtime.
 
+
+## Vercel release workflow
+
+Vercel builds are **release-gated** to prevent deployment-rate-limit problems.
+
+Normal commits are ignored by Vercel. A Vercel build only proceeds when the Git commit message contains:
+
+```text
+[deploy]
+```
+
+or:
+
+```text
+[release]
+```
+
+The repository also includes a manual GitHub Action named **Deploy Vercel Release**. Run it when a finished version is ready for production; it creates one empty `[deploy]` commit on `main`.
+
+This avoids burning Vercel build quota on every small development commit.
+
+The Vercel config also disables caching for `sw.js` and `manifest.webmanifest`, helping browsers pick up new releases instead of getting stuck on an older J.A.R.V.I.S. UI.
+
 ## License
 
 MIT.
