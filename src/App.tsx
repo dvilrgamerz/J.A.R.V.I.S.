@@ -1503,7 +1503,7 @@ function App() {
               <div className="power-terminal" aria-hidden="true">
                 <span className={bootProgress >= 18 ? "active" : ""}>[CORE] intelligence router online</span>
                 <span className={bootProgress >= 40 ? "active" : ""}>[MEM] context matrix synchronized</span>
-                <span className={routerWarm || bootProgress >= 52 ? "active" : ""}>[AI] adaptive route table ${routerWarm ? "prewarmed" : "warming"}</span>
+                <span className={routerWarm || bootProgress >= 52 ? "active" : ""}>[AI] adaptive route table {routerWarm ? "prewarmed" : "warming"}</span>
                 <span className={bootProgress >= 62 ? "active" : ""}>[NET] cloud link established</span>
                 <span className={bootProgress >= 82 ? "active" : ""}>[SYS] voice + tools calibrated</span>
                 <span className={bootProgress >= 96 ? "active" : ""}>[OK] all systems nominal</span>
