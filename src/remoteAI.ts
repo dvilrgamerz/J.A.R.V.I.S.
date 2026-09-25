@@ -19,6 +19,7 @@ type ChatArgs = {
   files: RemoteFile[];
   mode: PerformanceMode;
   profile?: RemoteProfile;
+  adaptive?: boolean;
   personality: Personality;
   roastLevel?: RoastLevel;
   research?: boolean;
@@ -158,6 +159,20 @@ async function getModelIds() {
 
 function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function chooseAdaptiveRoute(query: string, enabled: boolean, mode: PerformanceMode, profile: RemoteProfile) {
+  if (!enabled) return { mode, profile, label: profile === "power" ? "J.A.R.V.I.S. Smart Core" : profile === "standard" ? "J.A.R.V.I.S. Balanced Core" : "J.A.R.V.I.S. Fast Core" };
+  const text = query.trim();
+  const lower = text.toLowerCase();
+  let score = text.length > 420 ? 1 : 0;
+  if (text.length > 1100) score += 2;
+  if (/(debug|bug|error|architecture|refactor|algorithm|typescript|javascript|python|react|database|security|performance|deploy|github|code)/i.test(lower)) score += 2;
+  if (/(analyze|analyse|compare|reason|derive|prove|strategy|step by step|trade-off|design)/i.test(lower)) score += 2;
+  if (text.includes("=>") || text.split("\n").length > 20) score += 2;
+  if (score >= 4) return { mode: "smart" as PerformanceMode, profile: "power" as RemoteProfile, label: "J.A.R.V.I.S. Smart Core" };
+  if (score >= 2) return { mode: "balanced" as PerformanceMode, profile: "standard" as RemoteProfile, label: "J.A.R.V.I.S. Balanced Core" };
+  return { mode: "turbo" as PerformanceMode, profile: "lite" as RemoteProfile, label: "J.A.R.V.I.S. Fast Core" };
 }
 
 async function routeModels(mode: PerformanceMode, profile: RemoteProfile = "lite") {
@@ -307,7 +322,7 @@ function makeSystemPrompt(
 
   const roastBlock = makeRoastPrompt(roastLevel);
 
-  return `You are J.A.R.V.I.S. V5.5.2, a fast remote AI assistant used through a web interface.
+  return `You are J.A.R.V.I.S. V5.6, a fast remote AI assistant used through a web interface.
 The heavy AI inference runs remotely, not on the user's phone or laptop.
 ${PERSONALITIES[personality]}
 Answer directly and naturally. Use Markdown when it improves clarity.${roastBlock}
@@ -418,9 +433,12 @@ export async function streamRemoteChat(args: ChatArgs) {
   const latest =
     [...args.messages].reverse().find((message) => message.role === "user")?.content || "";
   const roastLevel = args.roastLevel || "off";
-  const config = configForRoast(args.mode, roastLevel);
-  const selectedMemories = selectMemories(args.memories, latest, args.mode);
-  const fileContext = selectFileContext(args.files, latest, args.mode);
+  const adaptive = chooseAdaptiveRoute(latest, Boolean(args.adaptive) && roastLevel === "off" && !args.research, args.mode, args.profile || "lite");
+  const effectiveMode = adaptive.mode;
+  const effectiveProfile = adaptive.profile;
+  const config = configForRoast(effectiveMode, roastLevel);
+  const selectedMemories = selectMemories(args.memories, latest, effectiveMode);
+  const fileContext = selectFileContext(args.files, latest, effectiveMode);
 
   const history = args.messages
     .slice(-config.historyLimit)
@@ -457,13 +475,13 @@ export async function streamRemoteChat(args: ChatArgs) {
   if (args.research) {
     result = await researchChat(requestMessages, config, args, startedAt);
   } else {
-    const roastMode: PerformanceMode = roastLevel === "god" ? "smart" : args.mode;
+    const roastMode: PerformanceMode = roastLevel === "god" ? "smart" : effectiveMode;
     const roastProfile: RemoteProfile =
       roastLevel === "god"
         ? "power"
         : roastLevel === "savage"
           ? "standard"
-          : args.profile || "lite";
+          : effectiveProfile;
     const candidates = await routeModels(roastMode, roastProfile);
     let lastError: unknown;
 
@@ -508,7 +526,8 @@ export async function streamRemoteChat(args: ChatArgs) {
     fileChunksUsed: fileContext.length,
     stopped: result.stopped,
     modelUsed: result.modelUsed,
-    researchUsed: Boolean(args.research)
+    researchUsed: Boolean(args.research),
+    routeLabel: args.research ? "J.A.R.V.I.S. Research Core" : adaptive.label
   };
 }
 

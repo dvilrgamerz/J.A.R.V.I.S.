@@ -5052,3 +5052,23 @@ body {
     animation: none !important;
   }
 }
+
+
+/* ===== V5.6 adaptive cinematic polish ===== */
+.power-core-stage::before,.power-core-stage::after{content:"";position:absolute;inset:-26px;border:1px solid rgba(92,226,255,.09);border-radius:50%;animation:v56-radar 3.2s ease-out infinite}
+.power-core-stage::after{animation-delay:1.6s}
+@keyframes v56-radar{0%{transform:scale(.72);opacity:0}24%{opacity:.65}100%{transform:scale(1.24);opacity:0}}
+.jarvis-power-screen.booting .power-brand strong{animation:v56-glitch 2.7s steps(1) infinite}
+@keyframes v56-glitch{0%,92%,100%{transform:none;text-shadow:none}94%{transform:translateX(2px);text-shadow:-3px 0 #44dfff,3px 0 #776cff}96%{transform:translateX(-2px)}}
+.power-terminal{display:grid;gap:4px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(104,227,255,.08);text-align:left;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.power-terminal span{color:rgba(104,145,158,.28);font-size:7px;letter-spacing:.05em;opacity:.25;transform:translateX(-5px);transition:.25s ease}
+.power-terminal span.active{color:#77d7df;opacity:.92;transform:none;text-shadow:0 0 10px rgba(81,218,239,.2)}
+.v56-shell{animation:v56-enter .72s cubic-bezier(.16,1,.3,1) both}
+@keyframes v56-enter{from{opacity:0;transform:scale(1.012);filter:blur(8px) brightness(1.3)}to{opacity:1;transform:none;filter:none}}
+.v56-shell .v55-hero-stage,.v56-shell .chat-card{transition:border-color .22s ease,box-shadow .22s ease,transform .22s ease}
+.v56-shell .v55-hero-stage:hover,.v56-shell .chat-card:hover{border-color:rgba(90,222,255,.18);box-shadow:0 20px 65px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.025)}
+.v56-shell .message-row.assistant .message-content{animation:v56-message .32s cubic-bezier(.16,1,.3,1) both}
+@keyframes v56-message{from{opacity:0;transform:translateY(8px)}}
+.v56-shell.is-thinking .v55-core-sphere{filter:drop-shadow(0 0 24px rgba(83,229,255,.4))}
+.v56-shell .composer:focus-within{box-shadow:0 0 0 1px rgba(99,227,255,.18),0 18px 54px rgba(0,0,0,.16)}
+@media(prefers-reduced-motion:reduce){.v56-shell,.power-core-stage::before,.power-core-stage::after,.jarvis-power-screen.booting .power-brand strong,.v56-shell .message-row.assistant .message-content{animation:none!important}}

@@ -195,7 +195,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.5.2 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
+    "J.A.R.V.I.S. V5.6 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
   createdAt: Date.now()
 };
 
@@ -1090,7 +1090,8 @@ function App() {
         files: files.map(({ name, text }) => ({ name, text })),
         mode: resolvedMode,
         profile: resolvedModel,
-        personality,
+        adaptive: modelPreference === "auto" && performancePreference === "auto",
+        personality;
         roastLevel,
         research: researchMode,
         shouldStop: () => stopRequestedRef.current,
@@ -1129,15 +1130,7 @@ function App() {
       setFileChunksUsed(result.fileChunksUsed);
       setEstimatedTokens(result.estimatedTokens);
       setTokensPerSecond(result.tokensPerSecond);
-      setModelUsed(
-        result.researchUsed
-          ? "J.A.R.V.I.S. Research Core"
-          : resolvedModel === "power"
-            ? "J.A.R.V.I.S. Smart Core"
-            : resolvedModel === "standard"
-              ? "J.A.R.V.I.S. Balanced Core"
-              : "J.A.R.V.I.S. Fast Core"
-      );
+      setModelUsed(result.routeLabel);
       setBackend(result.researchUsed ? "JARVIS RESEARCH" : "JARVIS CLOUD");
 
       if (!result.stopped) {
@@ -1447,7 +1440,7 @@ function App() {
           <div className="power-brand">
             <span className="power-brand-line" />
             <strong>J.A.R.V.I.S.</strong>
-            <small>V5.5.2 · INTELLIGENCE SYSTEM</small>
+            <small>V5.6 · INTELLIGENCE SYSTEM</small>
           </div>
 
           <div className="power-core-stage">
@@ -1497,6 +1490,13 @@ function App() {
                 <span className={bootProgress >= 70 ? "done" : ""}>TOOLS</span>
                 <span className={bootProgress >= 88 ? "done" : ""}>SECURITY</span>
               </div>
+              <div className="power-terminal" aria-hidden="true">
+                <span className={bootProgress >= 18 ? "active" : ""}>[CORE] intelligence router online</span>
+                <span className={bootProgress >= 40 ? "active" : ""}>[MEM] context matrix synchronized</span>
+                <span className={bootProgress >= 62 ? "active" : ""}>[NET] cloud link established</span>
+                <span className={bootProgress >= 82 ? "active" : ""}>[SYS] voice + tools calibrated</span>
+                <span className={bootProgress >= 96 ? "active" : ""}>[OK] all systems nominal</span>
+              </div>
             </div>
           )}
         </section>
@@ -1505,7 +1505,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell v3-shell v4-shell v5-shell v5-4-shell v5-5-shell roast-${roastLevel} ${roastLevel !== "off" ? "roast-active" : ""} ${busy ? "is-thinking" : ""}`} onPointerMove={handleVisualPointerMove} onPointerLeave={resetVisualPointer}>
+    <div className={`app-shell v3-shell v4-shell v5-shell v5-4-shell v5-5-shell v56-shell roast-${roastLevel} ${roastLevel !== "off" ? "roast-active" : ""} ${busy ? "is-thinking" : ""}`} onPointerMove={handleVisualPointerMove} onPointerLeave={resetVisualPointer}>
       <div className="scanlines" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
@@ -1521,7 +1521,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5.5.2</p>
+            <p>CLOUD INTELLIGENCE · V5.6</p>
           </div>
         </div>
 
@@ -1673,7 +1673,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">FRIENDLY CLOUD INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.5.2</em>
+              J.A.R.V.I.S. <em>V5.6</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
             <div className="v54-command-rail" aria-hidden="true">
@@ -1755,7 +1755,7 @@ function App() {
 
         <section className="v55-hero-stage">
           <div className="v55-hero-message">
-            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.5.2</span>
+            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.6</span>
             <h3>Helpful, creative, and ready to build with you.</h3>
             <p>
               A family-friendly AI command center for learning, coding, planning,
