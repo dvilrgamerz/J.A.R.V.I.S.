@@ -1,6 +1,30 @@
-# J.A.R.V.I.S. Web AI V5.3 Cloud
+# J.A.R.V.I.S. Web AI V5.4 Cloud
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.4 Cinematic Command UI
+
+V5.4 is a major visual/animation pass that keeps the remote-AI architecture intact.
+
+- layered holographic HUD grid
+- animated scanning sweep and screen-edge framing
+- more dimensional glass panels
+- upgraded reactor core glow, breathing, and energy particles
+- stronger thinking-state reactor animation
+- animated status rail for remote core/router/context
+- dynamic topbar energy line
+- V5.4 version-shine animation
+- hover depth on model/mode/tool controls
+- animated panel sheen
+- upgraded chat arena grid and depth
+- smoother message entrance animation
+- streaming-response glow state
+- richer assistant/user message surfaces
+- upgraded sticky composer with moving energy line
+- improved send-button feedback
+- tighter phone chat layout
+- safe-area-aware mobile composer
+- reduced-motion accessibility fallback
 
 ## V5 upgrades
 

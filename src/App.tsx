@@ -176,7 +176,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.3 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
+    "J.A.R.V.I.S. V5.4 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
   createdAt: Date.now()
 };
 
@@ -1310,18 +1310,23 @@ function App() {
   }
 
   return (
-    <div className={`app-shell v3-shell v4-shell v5-shell ${busy ? "is-thinking" : ""}`}>
+    <div className={`app-shell v3-shell v4-shell v5-shell v5-4-shell ${busy ? "is-thinking" : ""}`}>
       <div className="scanlines" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="ambient ambient-three" />
+      <div className="v54-hud-grid" aria-hidden="true" />
+      <div className="v54-hud-sweep" aria-hidden="true" />
+      <div className="v54-vignette" aria-hidden="true" />
+      <div className="v54-corner v54-corner-tl" aria-hidden="true" />
+      <div className="v54-corner v54-corner-br" aria-hidden="true" />
 
       <aside className="side-panel">
         <div className="brand">
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5.3</p>
+            <p>CLOUD INTELLIGENCE · V5.4</p>
           </div>
         </div>
 
@@ -1333,6 +1338,9 @@ function App() {
               <div className="reactor-ring ring-three" />
               <div className="reactor-ticks" />
               <div className="reactor-core"><CirclePower size={31} /></div>
+              <div className="v54-reactor-particles" aria-hidden="true">
+                <i /><i /><i /><i /><i /><i />
+              </div>
             </div>
             <div className="reactor-orbit orbit-a" />
             <div className="reactor-orbit orbit-b" />
@@ -1470,9 +1478,14 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">AGENTIC REMOTE INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.3</em>
+              J.A.R.V.I.S. <em>V5.4</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
+            <div className="v54-command-rail" aria-hidden="true">
+              <span><i />REMOTE CORE</span>
+              <span><i />LIVE ROUTER</span>
+              <span><i />SECURE CONTEXT</span>
+            </div>
           </div>
 
           <div className="top-actions">
@@ -1657,7 +1670,7 @@ function App() {
 
         <div className="cloud-ready-banner">
           <div>
-            <strong>V5.3 CLOUD AI READY</strong>
+            <strong>V5.4 CLOUD AI READY</strong>
             <span>No local model download · remote routing + failover · {REMOTE_MODEL_NAME}</span>
           </div>
           <span className="cloud-ready-dot" />
@@ -1734,7 +1747,7 @@ function App() {
           </button>
         </section>
 
-        <section className="chat-card v3-chat v4-chat">
+        <section className="chat-card v3-chat v4-chat v54-chat">
           <div className="chat-glow" />
 
           <div className="chat-stream" ref={chatStreamRef} onScroll={handleChatScroll}>
@@ -1828,7 +1841,7 @@ function App() {
               </div>
             )}
 
-            <form className="composer" onSubmit={submit}>
+            <form className="composer v54-composer" onSubmit={submit}>
               <button
                 type="button"
                 className={`mic-button ${listening ? "listening" : ""}`}

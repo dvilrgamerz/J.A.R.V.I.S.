@@ -1,8 +1,8 @@
 {
   "name": "jarvis-web-ai",
-  "version": "5.3.0",
+  "version": "5.4.0",
   "private": true,
-  "description": "J.A.R.V.I.S. V5.3 Cloud: remote AI with Research, Agent Workspace, responsive UI, streaming, and remote model routing.",
+  "description": "J.A.R.V.I.S. V5.4 Cloud: cinematic responsive command UI with remote AI routing, Research, Agent Workspace, memory, files, voice and tools.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
