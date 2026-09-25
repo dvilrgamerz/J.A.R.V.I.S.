@@ -8,7 +8,7 @@ import {
   useState
 } from "react";
 import MarkdownMessage from "./MarkdownMessage";
-import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat } from "./remoteAI";
+import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat, type RoastLevel } from "./remoteAI";
 import {
   ArrowDown,
   ArrowUp,
@@ -166,6 +166,13 @@ const PERSONALITY_INFO: Record<
   }
 };
 
+const ROAST_INFO: Record<RoastLevel, { label: string; detail: string }> = {
+  off: { label: "Off", detail: "Normal J.A.R.V.I.S." },
+  light: { label: "Light", detail: "Playful jokes" },
+  savage: { label: "Savage", detail: "Sharper roast" },
+  god: { label: "GOD", detail: "Roast-battle mode" }
+};
+
 const QUICK_PROMPTS = [
   "Explain something difficult simply",
   "Help me plan a project",
@@ -177,7 +184,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.5 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
+    "J.A.R.V.I.S. V5.5.1 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
   createdAt: Date.now()
 };
 
@@ -384,6 +391,9 @@ function App() {
   const [researchMode, setResearchMode] = useState<boolean>(() =>
     readStored<boolean>("jarvis.research.v5", false)
   );
+  const [roastLevel, setRoastLevel] = useState<RoastLevel>(() =>
+    readStored<RoastLevel>("jarvis.roastLevel.v5_5", "off")
+  );
   const [modelUsed, setModelUsed] = useState("Remote router");
   const [userScrolledAway, setUserScrolledAway] = useState(false);
   const [permissions, setPermissions] = useState<PermissionState>(() =>
@@ -507,6 +517,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem("jarvis.research.v5", JSON.stringify(researchMode));
   }, [researchMode]);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.roastLevel.v5_5", JSON.stringify(roastLevel));
+  }, [roastLevel]);
 
   useEffect(() => {
     if (agentPlan) {
@@ -1031,6 +1045,7 @@ function App() {
         mode: resolvedMode,
         profile: resolvedModel,
         personality,
+        roastLevel,
         research: researchMode,
         shouldStop: () => stopRequestedRef.current,
         onToken: (token, firstMs) => {
@@ -1197,6 +1212,7 @@ function App() {
         voiceEnabled,
         voiceConversation,
         researchMode,
+        roastLevel,
         permissions
       },
       agentPlan
@@ -1231,6 +1247,10 @@ function App() {
 
       if (typeof parsed.settings?.researchMode === "boolean") {
         setResearchMode(parsed.settings.researchMode);
+      }
+
+      if (["off", "light", "savage", "god"].includes(parsed.settings?.roastLevel)) {
+        setRoastLevel(parsed.settings.roastLevel as RoastLevel);
       }
 
       if (parsed.settings?.permissions) {
@@ -1275,6 +1295,7 @@ function App() {
     setInput("");
     setAgentPlan(null);
     setAgentGoal("");
+    setRoastLevel("off");
     setPermissions({
       microphone: true,
       files: true,
@@ -1293,7 +1314,8 @@ function App() {
       "jarvis.messages",
       "jarvis.permissions.v4",
       "jarvis.agent.v4",
-      "jarvis.research.v5"
+      "jarvis.research.v5",
+      "jarvis.roastLevel.v5_5"
     ].forEach((key) => localStorage.removeItem(key));
 
     setPrivacyOpen(false);
@@ -1329,7 +1351,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell v3-shell v4-shell v5-shell v5-4-shell v5-5-shell ${busy ? "is-thinking" : ""}`} onPointerMove={handleVisualPointerMove} onPointerLeave={resetVisualPointer}>
+    <div className={`app-shell v3-shell v4-shell v5-shell v5-4-shell v5-5-shell roast-${roastLevel} ${roastLevel !== "off" ? "roast-active" : ""} ${busy ? "is-thinking" : ""}`} onPointerMove={handleVisualPointerMove} onPointerLeave={resetVisualPointer}>
       <div className="scanlines" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
@@ -1785,6 +1807,28 @@ function App() {
           ))}
         </section>
 
+        <section className="v55-roast-bar" aria-label="Roast Mode">
+          <div className="v55-roast-copy">
+            <span><Zap size={14} /> COMEDY ROAST</span>
+            <strong>{ROAST_INFO[roastLevel].label}</strong>
+            <small>{ROAST_INFO[roastLevel].detail} · opt-in and off by default</small>
+          </div>
+
+          <div className="v55-roast-levels">
+            {(Object.keys(ROAST_INFO) as RoastLevel[]).map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={roastLevel === level ? `active ${level}` : level}
+                onClick={() => setRoastLevel(level)}
+                disabled={busy}
+                title={ROAST_INFO[level].detail}
+              >
+                {ROAST_INFO[level].label}
+              </button>
+            ))}
+          </div>
+        </section>
         <section className="quick-actions">
           <button onClick={() => void sendMessage("/calc 12 * (3 + 4)")} disabled={busy}>
             <Cpu size={15} /> Calculator
@@ -1963,6 +2007,8 @@ function App() {
               <span>{PERSONALITY_INFO[personality].label.toUpperCase()}</span>
               <i />
               <span>{researchMode ? "RESEARCH" : backend}</span>
+              <i />
+              <span>{roastLevel === "off" ? "ROAST OFF" : `ROAST ${ROAST_INFO[roastLevel].label.toUpperCase()}`}</span>
               <i />
               <span title={modelUsed}>{modelUsed.toUpperCase().slice(0, 28)}</span>
               <i />
