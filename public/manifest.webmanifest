@@ -1,13 +1,13 @@
 {
-  "name": "J.A.R.V.I.S. Web AI V5.4 Cloud",
+  "name": "J.A.R.V.I.S. Web AI V5.5 Cloud",
   "short_name": "J.A.R.V.I.S.",
-  "description": "Cinematic responsive remote AI command center with routing, Research, Agent Workspace, memory, files, voice and tools.",
+  "description": "Family-friendly 3D holographic remote AI command center with smart routing, Research, Agent Workspace, memory, files, voice and tools.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#02070d",
-  "theme_color": "#02070d",
+  "background_color": "#020912",
+  "theme_color": "#06131e",
   "categories": [
     "productivity",
     "utilities"

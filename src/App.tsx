@@ -1,6 +1,7 @@
 import {
   ChangeEvent,
   FormEvent,
+  PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
   useRef,
@@ -176,7 +177,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.4 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
+    "J.A.R.V.I.S. V5.5 Cloud online. Remote AI routing, failover, Research mode, and responsive vertical scrolling are ready.",
   createdAt: Date.now()
 };
 
@@ -1299,6 +1300,24 @@ function App() {
     setNotice("Local J.A.R.V.I.S. chat, memory, and settings data cleared.");
   }
 
+  function handleVisualPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / Math.max(rect.width, 1) - 0.5;
+    const y = (event.clientY - rect.top) / Math.max(rect.height, 1) - 0.5;
+
+    event.currentTarget.style.setProperty("--v55-px", `${x * 18}px`);
+    event.currentTarget.style.setProperty("--v55-py", `${y * 18}px`);
+    event.currentTarget.style.setProperty("--v55-rx", `${-y * 4}deg`);
+    event.currentTarget.style.setProperty("--v55-ry", `${x * 5}deg`);
+  }
+
+  function resetVisualPointer(event: ReactPointerEvent<HTMLDivElement>) {
+    event.currentTarget.style.setProperty("--v55-px", "0px");
+    event.currentTarget.style.setProperty("--v55-py", "0px");
+    event.currentTarget.style.setProperty("--v55-rx", "0deg");
+    event.currentTarget.style.setProperty("--v55-ry", "0deg");
+  }
+
   async function installApp() {
     if (!installPrompt) {
       setNotice("Install is not currently offered by this browser. You can still use Add to Home screen / Install app from the browser menu.");
@@ -1310,7 +1329,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell v3-shell v4-shell v5-shell v5-4-shell ${busy ? "is-thinking" : ""}`}>
+    <div className={`app-shell v3-shell v4-shell v5-shell v5-4-shell v5-5-shell ${busy ? "is-thinking" : ""}`} onPointerMove={handleVisualPointerMove} onPointerLeave={resetVisualPointer}>
       <div className="scanlines" />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
@@ -1326,7 +1345,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>CLOUD INTELLIGENCE · V5.4</p>
+            <p>CLOUD INTELLIGENCE · V5.5</p>
           </div>
         </div>
 
@@ -1476,9 +1495,9 @@ function App() {
       <main className="main-panel v3-main v4-main">
         <header className="topbar">
           <div className="hero-copy">
-            <span className="eyebrow">AGENTIC REMOTE INTELLIGENCE</span>
+            <span className="eyebrow">FRIENDLY CLOUD INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.4</em>
+              J.A.R.V.I.S. <em>V5.5</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
             <div className="v54-command-rail" aria-hidden="true">
@@ -1548,6 +1567,54 @@ function App() {
             </button>
           </div>
         </header>
+
+        <section className="v55-hero-stage">
+          <div className="v55-hero-message">
+            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.5</span>
+            <h3>Helpful, creative, and ready to build with you.</h3>
+            <p>
+              A family-friendly AI command center for learning, coding, planning,
+              researching, and creating — with remote AI doing the heavy work.
+            </p>
+            <div className="v55-family-badges">
+              <span><ShieldCheck size={12} /> Friendly by default</span>
+              <span><BrainCircuit size={12} /> Smart routing</span>
+              <span><Wifi size={12} /> Cloud powered</span>
+            </div>
+          </div>
+
+          <div className="v55-orbit-scene" aria-hidden="true">
+            <div className="v55-orbit-ring ring-a" />
+            <div className="v55-orbit-ring ring-b" />
+            <div className="v55-orbit-ring ring-c" />
+            <div className="v55-core-sphere">
+              <div className="v55-core-glass" />
+              <Sparkles size={30} />
+            </div>
+
+            <div className="v55-float-card card-one">
+              <BookOpen size={15} />
+              <span>LEARN</span>
+              <strong>Clear explanations</strong>
+            </div>
+            <div className="v55-float-card card-two">
+              <Code2 size={15} />
+              <span>BUILD</span>
+              <strong>Code + projects</strong>
+            </div>
+            <div className="v55-float-card card-three">
+              <WandSparkles size={15} />
+              <span>CREATE</span>
+              <strong>Ideas + plans</strong>
+            </div>
+
+            <i className="v55-particle p1" />
+            <i className="v55-particle p2" />
+            <i className="v55-particle p3" />
+            <i className="v55-particle p4" />
+            <i className="v55-particle p5" />
+          </div>
+        </section>
 
         <section className="v3-session-bar">
           <div className="session-switcher">
@@ -1670,7 +1737,7 @@ function App() {
 
         <div className="cloud-ready-banner">
           <div>
-            <strong>V5.4 CLOUD AI READY</strong>
+            <strong>V5.5 CLOUD AI READY</strong>
             <span>No local model download · remote routing + failover · {REMOTE_MODEL_NAME}</span>
           </div>
           <span className="cloud-ready-dot" />
@@ -1747,7 +1814,7 @@ function App() {
           </button>
         </section>
 
-        <section className="chat-card v3-chat v4-chat v54-chat">
+        <section className="chat-card v3-chat v4-chat v54-chat v55-chat">
           <div className="chat-glow" />
 
           <div className="chat-stream" ref={chatStreamRef} onScroll={handleChatScroll}>
@@ -1841,7 +1908,7 @@ function App() {
               </div>
             )}
 
-            <form className="composer v54-composer" onSubmit={submit}>
+            <form className="composer v54-composer v55-composer" onSubmit={submit}>
               <button
                 type="button"
                 className={`mic-button ${listening ? "listening" : ""}`}

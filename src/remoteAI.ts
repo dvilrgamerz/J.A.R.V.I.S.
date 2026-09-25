@@ -248,7 +248,7 @@ function makeSystemPrompt(
     ? "\n\nResearch mode is enabled. Use web search for current claims. Cite the most useful sources with clickable links and distinguish current web findings from general knowledge."
     : "";
 
-  return `You are J.A.R.V.I.S. V5.3, a fast remote AI assistant used through a web interface.
+  return `You are J.A.R.V.I.S. V5.5, a fast remote AI assistant used through a web interface.
 The heavy AI inference runs remotely, not on the user's phone or laptop.
 ${PERSONALITIES[personality]}
 Answer directly and naturally. Use Markdown when it improves clarity.
@@ -516,4 +516,4 @@ Personality mode: ${personality}.`
   };
 }
 
-export const REMOTE_MODEL_NAME = "V5.3 Remote Router";
+export const REMOTE_MODEL_NAME = "V5.5 Remote Router";

@@ -1,6 +1,27 @@
-# J.A.R.V.I.S. Web AI V5.4 Cloud
+# J.A.R.V.I.S. Web AI V5.5 Cloud
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.5 Family-Friendly 3D UI
+
+V5.5 is a full visual redesign built around a friendlier futuristic look while preserving the same remote-AI architecture.
+
+- new family-friendly holographic hero
+- interactive 3D perspective/parallax on pointer devices
+- automatic floating depth animation on phones
+- 3D AI core sphere with orbit rings
+- floating Learn / Build / Create capability cards
+- animated holographic particles
+- softer cyan / blue / violet / mint visual system
+- brighter, more welcoming glass panels
+- friendlier default status language
+- upgraded responsive chat surfaces
+- 3D composer focus motion
+- richer button depth and hover feedback
+- mobile-specific hero scaling
+- safe-area-aware phone layout
+- reduced-motion accessibility fallback
+- no mature/uncensored controls in the visible UI
 
 ## V5.4 Cinematic Command UI
 
