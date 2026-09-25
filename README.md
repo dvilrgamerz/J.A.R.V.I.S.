@@ -1,6 +1,23 @@
-# J.A.R.V.I.S. Web AI V5.1 Cloud
+# J.A.R.V.I.S. Web AI V5.2 Cloud
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.2 Roast Lab
+
+V5.2 extends Roast Lab with a fifth level: **UNCENSORED TEST**.
+
+This level is intended for private model testing, self-roasts, fictional targets, and test personas. It forces mature-language mode on and asks for longer roast chains, stronger profanity, escalating callbacks, absurd comparisons, reversals, and minimal politeness.
+
+Roast levels:
+- **Off** — normal J.A.R.V.I.S.
+- **Light** — playful teasing
+- **Savage** — hard sarcasm and sharper jokes
+- **GOD** — maximum standard roast intensity
+- **UNCENSORED TEST** — strongest private-testing profile
+
+Hard limits still remain for safety: no protected-class slurs, doxxing, violent threats, fabricated crimes/medical claims/trauma, sexual violence, or self-harm encouragement.
+
+For another real person, Roast Lab is limited to behavior/content/details explicitly supplied by the user rather than invented sensitive facts.
 
 ## V5.1 Roast Lab
 
