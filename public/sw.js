@@ -1,4 +1,4 @@
-const CACHE = "jarvis-v5-5-2-shell-v1";
+const CACHE = "jarvis-v5-6-1-shell-v1";
 const SHELL = ["/", "/manifest.webmanifest", "/jarvis.svg"];
 
 self.addEventListener("install", (event) => {

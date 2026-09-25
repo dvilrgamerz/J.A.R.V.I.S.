@@ -1,6 +1,25 @@
-# J.A.R.V.I.S. Web AI V5.5.2
+# J.A.R.V.I.S. V5.6.1 Adaptive Core
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.6.1 Adaptive Core
+
+This pass builds on V5.6 and fixes its failed TypeScript build while improving both speed and answer quality.
+
+- **Adaptive routing** when both profile and inference mode are Auto
+- Quick prompts prefer the Fast Core
+- normal prompts can use Balanced Core
+- harder reasoning/coding/debugging prompts move to Smart Core
+- Smart Core receives a larger useful history/context and response budget
+- coding/deep requests use lower creativity for better precision
+- router model catalogue is prewarmed while the boot animation is running
+- J.A.R.V.I.S. performs an internal consistency check for complex responses
+- UI shows the detected route intent after each answer
+- boot terminal shows Adaptive Core warmup state
+- richer startup progress flare, core pulse, dashboard reveal, and shutdown collapse VFX
+- provider model names remain hidden from the product UI
+
+Manual profile/mode choices still override Adaptive routing.
 
 ## V5.5.2 Boot System
 
