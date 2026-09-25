@@ -7,7 +7,7 @@ import {
   useState
 } from "react";
 import MarkdownMessage from "./MarkdownMessage";
-import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat, type RoastLevel } from "./remoteAI";
+import { buildRemotePlan, REMOTE_MODEL_NAME, streamRemoteChat } from "./remoteAI";
 import {
   ArrowDown,
   ArrowUp,
@@ -137,17 +137,6 @@ const MODE_INFO: Record<
   turbo: { label: "Turbo", detail: "Fastest", icon: Rocket },
   balanced: { label: "Balanced", detail: "Daily", icon: Gauge },
   smart: { label: "Smart", detail: "Deeper", icon: BrainCircuit }
-};
-
-const ROAST_INFO: Record<
-  RoastLevel,
-  { label: string; detail: string }
-> = {
-  off: { label: "Off", detail: "Normal JARVIS" },
-  light: { label: "Light", detail: "Playful" },
-  savage: { label: "Savage", detail: "Hard roast" },
-  god: { label: "GOD", detail: "Max intensity" },
-  uncensored: { label: "UNCENSORED", detail: "Human roast writer" }
 };
 
 const PERSONALITY_INFO: Record<
@@ -394,12 +383,6 @@ function App() {
   const [researchMode, setResearchMode] = useState<boolean>(() =>
     readStored<boolean>("jarvis.research.v5", false)
   );
-  const [roastLevel, setRoastLevel] = useState<RoastLevel>(() =>
-    readStored<RoastLevel>("jarvis.roastLevel.v5_1", "off")
-  );
-  const [matureRoast, setMatureRoast] = useState<boolean>(() =>
-    readStored<boolean>("jarvis.roastMature.v5_1", false)
-  );
   const [modelUsed, setModelUsed] = useState("Remote router");
   const [userScrolledAway, setUserScrolledAway] = useState(false);
   const [permissions, setPermissions] = useState<PermissionState>(() =>
@@ -523,14 +506,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem("jarvis.research.v5", JSON.stringify(researchMode));
   }, [researchMode]);
-
-  useEffect(() => {
-    localStorage.setItem("jarvis.roastLevel.v5_1", JSON.stringify(roastLevel));
-  }, [roastLevel]);
-
-  useEffect(() => {
-    localStorage.setItem("jarvis.roastMature.v5_1", JSON.stringify(matureRoast));
-  }, [matureRoast]);
 
   useEffect(() => {
     if (agentPlan) {
@@ -1055,8 +1030,6 @@ function App() {
         mode: resolvedMode,
         profile: resolvedModel,
         personality,
-        roastLevel,
-        matureRoast,
         research: researchMode,
         shouldStop: () => stopRequestedRef.current,
         onToken: (token, firstMs) => {
@@ -1223,8 +1196,6 @@ function App() {
         voiceEnabled,
         voiceConversation,
         researchMode,
-        roastLevel,
-        matureRoast,
         permissions
       },
       agentPlan
@@ -1259,14 +1230,6 @@ function App() {
 
       if (typeof parsed.settings?.researchMode === "boolean") {
         setResearchMode(parsed.settings.researchMode);
-      }
-
-      if (["off", "light", "savage", "god", "uncensored"].includes(parsed.settings?.roastLevel)) {
-        setRoastLevel(parsed.settings.roastLevel);
-      }
-
-      if (typeof parsed.settings?.matureRoast === "boolean") {
-        setMatureRoast(parsed.settings.matureRoast);
       }
 
       if (parsed.settings?.permissions) {
@@ -1317,9 +1280,6 @@ function App() {
       clipboard: true,
       notifications: false
     });
-    setRoastLevel("off");
-    setMatureRoast(false);
-
     [
       "jarvis.sessions.v4_1",
       "jarvis.sessions.v3",
@@ -1332,9 +1292,7 @@ function App() {
       "jarvis.messages",
       "jarvis.permissions.v4",
       "jarvis.agent.v4",
-      "jarvis.research.v5",
-      "jarvis.roastLevel.v5_1",
-      "jarvis.roastMature.v5_1"
+      "jarvis.research.v5"
     ].forEach((key) => localStorage.removeItem(key));
 
     setPrivacyOpen(false);
@@ -1695,50 +1653,6 @@ function App() {
             </div>
           </div>
 
-          <div className="v3-control-card roast-lab-card">
-            <div className="v3-control-title">
-              <Zap size={15} />
-              <span>ROAST LAB · TESTING</span>
-            </div>
-
-            <div className="roast-level-grid">
-              {(Object.keys(ROAST_INFO) as RoastLevel[]).map((level) => (
-                <button
-                  key={level}
-                  className={roastLevel === level ? `selected roast-${level}` : `roast-${level}`}
-                  onClick={() => {
-                    setRoastLevel(level);
-                    if (level === "uncensored") setMatureRoast(true);
-                  }}
-                  disabled={busy}
-                >
-                  <strong>{ROAST_INFO[level].label}</strong>
-                  <small>{ROAST_INFO[level].detail}</small>
-                </button>
-              ))}
-            </div>
-
-            <label className="roast-mature-toggle">
-              <input
-                type="checkbox"
-                checked={matureRoast}
-                onChange={(event) => setMatureRoast(event.target.checked)}
-                disabled={busy || roastLevel === "off" || roastLevel === "uncensored"}
-              />
-              <span>
-                <strong>18+ Language</strong>
-                <small>
-                  {roastLevel === "uncensored"
-                    ? "Forced ON in UNCENSORED TEST"
-                    : "Allows profanity/strong language in Roast Lab"}
-                </small>
-              </span>
-            </label>
-
-            <p className="roast-lab-note">
-              UNCENSORED TEST now uses the Roast Writer engine: stronger remote routing, higher creativity, exact-detail punchlines, varied joke structures, callbacks, profanity for timing, and a hard closer. Hard safety limits still block protected-class slurs, threats, doxxing, fabricated serious allegations, and self-harm encouragement.
-            </p>
-          </div>
         </section>
 
         <div className="cloud-ready-banner">
@@ -1803,20 +1717,6 @@ function App() {
           </button>
           <button onClick={clearActiveChat} disabled={busy}>
             <Trash2 size={15} /> Clear Session
-          </button>
-          <button
-            className={roastLevel !== "off" ? `roast-test-active ${roastLevel === "uncensored" ? "roast-test-uncensored" : ""}` : ""}
-            onClick={() =>
-              void sendMessage(
-                roastLevel === "uncensored"
-                  ? "UNCENSORED ROAST WRITER TEST: This is a fictional/self-roast test. I spent ten minutes looking for my phone while it was in my hand, then blamed the room for being messy. Give me a human roast-battle response: cold open, different angles, callbacks to both details, escalating punchlines, natural profanity, and finish with your strongest one-line closer. No compliments or explanation afterward."
-                  : "ROAST LAB TEST: Roast this line: I spent ten minutes looking for my phone while it was in my hand."
-              )
-            }
-            disabled={busy || roastLevel === "off"}
-            title="Run a safe Roast Lab test"
-          >
-            <Zap size={15} /> Test Roast
           </button>
           <button
             className={researchMode ? "research-active" : ""}
@@ -1983,14 +1883,6 @@ function App() {
               <span>{PERSONALITY_INFO[personality].label.toUpperCase()}</span>
               <i />
               <span>{researchMode ? "RESEARCH" : backend}</span>
-              <i />
-              <span className={roastLevel !== "off" ? "roast-footer-active" : ""}>
-                {roastLevel === "off"
-                  ? "ROAST OFF"
-                  : roastLevel === "uncensored"
-                    ? "ROAST UNCENSORED · PRIVATE TEST"
-                    : `ROAST ${roastLevel.toUpperCase()}${matureRoast ? " · 18+" : ""}`}
-              </span>
               <i />
               <span title={modelUsed}>{modelUsed.toUpperCase().slice(0, 28)}</span>
               <i />
