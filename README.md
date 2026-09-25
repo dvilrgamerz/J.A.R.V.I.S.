@@ -1,6 +1,17 @@
-# J.A.R.V.I.S. Web AI V5.5 Cloud
+# J.A.R.V.I.S. Web AI V5.5.1 Cloud
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.5.1 Roast Mode
+
+Roast Mode is back as an **opt-in** comedy feature while normal J.A.R.V.I.S. remains family-friendly by default.
+
+- **Off** — normal J.A.R.V.I.S.
+- **Light** — playful teasing
+- **Savage** — sharper roast-battle writing
+- **GOD** — strongest roast-writing profile and stronger remote route when available
+
+GOD mode focuses on specific details, varied joke structures, callbacks, and stronger closers instead of generic AI insults. Safety boundaries remain for protected-class slurs, threats, doxxing/private information, self-harm encouragement, and fabricated serious allegations.
 
 ## V5.5 Family-Friendly 3D UI
 

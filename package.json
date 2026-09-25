@@ -1,8 +1,8 @@
 {
   "name": "jarvis-web-ai",
-  "version": "5.5.0",
+  "version": "5.5.1",
   "private": true,
-  "description": "J.A.R.V.I.S. V5.5 Cloud: family-friendly 3D holographic AI command center with remote routing, Research, Agent Workspace, memory, files, voice and tools.",
+  "description": "J.A.R.V.I.S. V5.5.1 Cloud: family-friendly 3D holographic AI command center with opt-in Roast Mode, remote routing, Research, Agent Workspace, memory, files, voice and tools.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
