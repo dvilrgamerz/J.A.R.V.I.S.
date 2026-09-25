@@ -71,3 +71,12 @@ It does not cache the remote AI response service or model weights.
 ## Reporting
 
 Do not post credentials, tokens, or sensitive exploit details in a public issue.
+
+
+## V5.2 Roast Lab testing
+
+UNCENSORED TEST is a style/intensity profile, not a removal of all safety boundaries.
+
+It may use strong profanity and aggressive comedic language in self-roasts, fictional/test scenarios, and supplied-content roasting.
+
+Do not use Roast Lab to generate protected-class slurs, doxxing/private data, violent threats, fabricated serious allegations, sexual violence, or self-harm encouragement.
