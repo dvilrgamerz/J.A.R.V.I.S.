@@ -1,6 +1,24 @@
-# J.A.R.V.I.S. V5.6.1 Adaptive Core
+# J.A.R.V.I.S. V5.6.2 Adaptive Core
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.6.2 Roast Everywhere
+
+Roast Mode is now a persistent conversation personality instead of a one-off special prompt.
+
+- when Roast Mode is ON, **every normal reply** keeps the selected roast style
+- simple messages such as `hi`, `hello`, `good morning`, or `thanks` still get roasted
+- useful questions are still answered correctly; the roast is woven into the answer
+- **Light** adds 1-3 playful teasing lines
+- **Savage** adds sharper multi-punchline roast writing with callbacks
+- **GOD** is roast-forward from the opening line and uses a larger context/punchline budget
+- new **18+ Language** toggle allows stronger natural profanity
+- profanity is used for comedic timing rather than inserted into every sentence
+- stronger anti-cliché guidance reduces repetitive AI roast templates
+- roast history/context is larger so callbacks can reference earlier messages
+- mature-language preference is stored locally and included in backup import/export
+
+Hard boundaries remain for protected-class slurs, threats, doxxing/private information, self-harm encouragement, and fabricated serious allegations.
 
 ## V5.6.1 Adaptive Core
 

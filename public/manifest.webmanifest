@@ -1,7 +1,7 @@
 {
-  "name": "J.A.R.V.I.S. V5.6.1 Adaptive Core",
+  "name": "J.A.R.V.I.S. V5.6.2 Adaptive Core",
   "short_name": "J.A.R.V.I.S.",
-  "description": "Bootable 3D holographic J.A.R.V.I.S. command center with intent-aware Adaptive Core routing, startup/shutdown VFX, Research, Roast Mode, Agent Workspace, memory, files, voice and tools.",
+  "description": "Bootable holographic J.A.R.V.I.S. command center with persistent opt-in Roast Mode, optional mature-language profanity, Adaptive Core routing, Research, memory, voice, files and tools.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -5298,3 +5298,127 @@ body {
     animation: none !important;
   }
 }
+
+
+/* ===== V5.6.2 Roast Everywhere ===== */
+.v55-roast-bar {
+  flex-wrap: wrap;
+}
+
+.v562-mature-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 126, 82, .1);
+  border-radius: 10px;
+  background: rgba(255, 94, 58, .025);
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.v562-mature-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.v562-toggle-track {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 164, 112, .18);
+  border-radius: 99px;
+  background: rgba(255,255,255,.025);
+  transition: 160ms ease;
+}
+
+.v562-toggle-track i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #816c63;
+  transition: 160ms cubic-bezier(.2,.8,.2,1);
+}
+
+.v562-mature-toggle.active {
+  border-color: rgba(255, 124, 68, .3);
+  background:
+    radial-gradient(circle at 0 50%, rgba(255, 91, 48, .1), transparent 58%),
+    rgba(98, 34, 20, .07);
+  box-shadow: inset 0 0 18px rgba(255, 95, 48, .035);
+}
+
+.v562-mature-toggle.active .v562-toggle-track {
+  border-color: rgba(255, 141, 79, .45);
+  background: rgba(255, 108, 54, .14);
+  box-shadow: 0 0 12px rgba(255, 107, 55, .08);
+}
+
+.v562-mature-toggle.active .v562-toggle-track i {
+  left: 15px;
+  background: #ff9a62;
+  box-shadow: 0 0 10px rgba(255, 126, 69, .42);
+}
+
+.v562-toggle-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.v562-toggle-copy strong {
+  color: #a98270;
+  font-size: 7px;
+  letter-spacing: .08em;
+}
+
+.v562-toggle-copy small {
+  color: #685951;
+  font-size: 7px;
+}
+
+.v562-mature-toggle.active .v562-toggle-copy strong {
+  color: #ffc3a2;
+}
+
+.v562-mature-toggle:has(input:disabled) {
+  opacity: .36;
+  cursor: not-allowed;
+}
+
+.roast-active .message-row.assistant .message-content {
+  border-color: rgba(255, 137, 80, .07);
+}
+
+.roast-savage .message-row.assistant .message-content,
+.roast-god .message-row.assistant .message-content {
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 112, 54, .045), transparent 42%),
+    linear-gradient(145deg, rgba(15, 52, 67, 0.22), rgba(4, 19, 29, 0.17));
+}
+
+.roast-god .v55-roast-bar {
+  box-shadow:
+    0 12px 34px rgba(0,0,0,.12),
+    0 0 30px rgba(255, 107, 48, .035),
+    inset 0 0 24px rgba(255, 132, 72, .035);
+}
+
+@media (max-width: 760px) {
+  .v562-mature-toggle {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v562-toggle-track i {
+    transition: none !important;
+  }
+}
