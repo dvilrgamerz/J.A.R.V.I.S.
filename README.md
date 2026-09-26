@@ -1,6 +1,19 @@
-# J.A.R.V.I.S. V5.6.3 Adaptive Core
+# J.A.R.V.I.S. V5.6.4 Adaptive Core
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.6.4 Profanity Guarantee
+
+When **18+ Language** is enabled, every Roast Mode reply now contains at least one ordinary profanity word.
+
+- the system prompt explicitly requires profanity on every 18+ response
+- a deterministic final-response fallback checks the generated answer
+- if the model forgets to swear, J.A.R.V.I.S. adds a natural profanity line before displaying the final reply
+- Light + 18+ guarantees at least one ordinary swear
+- Savage/GOD + Aggressive 18+ guarantees at least one stronger ordinary swear
+- profanity is varied rather than forcing the same word every time
+- Roast Mode OFF is unaffected
+- protected-class slurs remain blocked
 
 ## V5.6.3 Aggressive Roast
 
