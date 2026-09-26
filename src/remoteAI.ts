@@ -22,6 +22,7 @@ type ChatArgs = {
   adaptive?: boolean;
   personality: Personality;
   roastLevel?: RoastLevel;
+  matureRoast?: boolean;
   research?: boolean;
   onToken: (text: string, firstChunkMs: number) => void;
   shouldStop: () => boolean;
@@ -294,10 +295,10 @@ function configForRoast(mode: PerformanceMode, level: RoastLevel) {
   if (level === "god") {
     return {
       ...base,
-      historyLimit: Math.max(base.historyLimit, 18),
-      maxChars: Math.max(base.maxChars, 5600),
-      maxTokens: Math.max(base.maxTokens, 900),
-      temperature: 0.84,
+      historyLimit: Math.max(base.historyLimit, 22),
+      maxChars: Math.max(base.maxChars, 7000),
+      maxTokens: Math.max(base.maxTokens, 1100),
+      temperature: 0.9,
       reasoningEffort: "medium",
       verbosity: "medium"
     };
@@ -306,8 +307,11 @@ function configForRoast(mode: PerformanceMode, level: RoastLevel) {
   if (level === "savage") {
     return {
       ...base,
-      maxTokens: Math.max(base.maxTokens, 650),
-      temperature: 0.7
+      historyLimit: Math.max(base.historyLimit, 16),
+      maxChars: Math.max(base.maxChars, 5200),
+      maxTokens: Math.max(base.maxTokens, 760),
+      temperature: 0.76,
+      reasoningEffort: base.reasoningEffort === "none" ? "low" : base.reasoningEffort
     };
   }
 
@@ -362,25 +366,37 @@ function configForAdaptiveRoute(
   };
 }
 
-function makeRoastPrompt(level: RoastLevel) {
+function makeRoastPrompt(level: RoastLevel, mature: boolean) {
   if (level === "off") return "";
+
+  const language = mature
+    ? "Mature-language mode is ON. Natural profanity such as damn, hell, shit, and fuck is allowed when it improves timing, emphasis, or punchlines. Do not mechanically swear in every sentence."
+    : "Keep profanity light or clean unless the user's own wording makes a mild swear natural.";
+
+  const alwaysOn =
+    "Roast Mode is a persistent conversation personality. When enabled, EVERY ordinary assistant reply must carry the selected roast style, even if the user only says hi, hello, good morning, thanks, what are you doing, or asks a normal question. Do not wait for an explicit roast request. Still answer the user's actual question or task correctly; weave the roast into the answer.";
 
   const style =
     level === "light"
-      ? "Use playful teasing, clever observations, and friendly punchlines. Keep the mood obviously fun."
+      ? "LIGHT: keep the useful answer first, then add 1-3 playful, specific teasing lines. Friendly, quick, and witty."
       : level === "savage"
-        ? "Use sharp roast-battle comedy with specific observations, sarcasm, misdirection, exaggeration, and strong callbacks."
-        : "Use high-intensity roast-battle comedy: rapid distinct punchlines, specific callbacks, reversals, escalating absurd comparisons, confident delivery, and a strong closing punchline."; 
+        ? "SAVAGE: make the answer useful but roast-forward. Use 3-6 sharp punchlines when there is enough material, with sarcasm, misdirection, concrete comparisons, and callbacks."
+        : "GOD: write like a strong roast-battle comic who also knows the answer. Be roast-forward from the opening line. For tiny messages like 'hi', still produce 2-4 distinct punchlines. For richer prompts, aim for 6-12 strong punchlines or a sustained roast paragraph with callbacks, reversals, escalating comparisons, and a hard closer.";
 
-  const godCraft = level === "god"
-    ? "\nFor GOD mode: aim for 8-14 distinct punchlines when the prompt gives enough material; mine exact details from the user prompt; vary joke structures; use callbacks; avoid repetitive AI roast clichés; do not explain jokes or add an all-jokes-aside compliment unless requested."
-    : "";
+  const craft =
+    level === "god" || level === "savage"
+      ? "\nComedy craft: mine exact wording, contradictions, tiny mistakes, overconfidence, weird priorities, and accidental self-owns. Vary joke forms: one-liner, analogy, misdirection, fake quote, understatement, escalation, reversal, and callback. Avoid repetitive AI clichés such as constant NPC, loading-screen, Wi-Fi, 404, tutorial-mode, participation-trophy, discount-version, or repeated 'you're the type of person who' templates unless uniquely relevant. Do not explain the joke. Do not finish with an apology, reassurance, fake compliment, or 'all jokes aside' unless requested."
+      : "";
 
-  return "\n\nROAST MODE is enabled at " + level.toUpperCase() + " intensity.\n" +
-    style + godCraft +
+  return (
+    "\n\nROAST MODE is enabled at " + level.toUpperCase() + " intensity.\n" +
+    alwaysOn + "\n" +
+    style + "\n" +
+    language + craft +
     "\nKeep it comedy-focused. Do not target protected traits, use protected-class slurs, threaten violence, expose private information, encourage self-harm, or invent crimes, medical conditions, trauma, sexual facts, or other serious real-world allegations." +
-    "\nFor another real person, roast only the behavior, style, statements, or non-sensitive details supplied by the user." +
-    "\nWhen the target is the user, a fictional character, or a clearly fictional test persona, maximize the selected comedic intensity within these boundaries."; 
+    "\nFor another real person, roast only behavior, style, statements, posts, or non-sensitive details explicitly supplied by the user." +
+    "\nWhen the target is the user, a fictional character, or a clearly fictional test persona, maximize the selected comedic intensity within these boundaries."
+  );
 }
 
 function makeSystemPrompt(
@@ -388,7 +404,8 @@ function makeSystemPrompt(
   fileContext: string[],
   personality: Personality,
   research: boolean,
-  roastLevel: RoastLevel
+  roastLevel: RoastLevel,
+  matureRoast: boolean
 ) {
   const memoryBlock = memories.length
     ? `\n\nRelevant user-approved memory:\n- ${memories.join("\n- ")}`
@@ -402,9 +419,9 @@ function makeSystemPrompt(
     ? "\n\nResearch mode is enabled. Use web search for current claims. Cite the most useful sources with clickable links and distinguish current web findings from general knowledge."
     : "";
 
-  const roastBlock = makeRoastPrompt(roastLevel);
+  const roastBlock = makeRoastPrompt(roastLevel, matureRoast);
 
-  return `You are J.A.R.V.I.S. V5.6, a fast remote AI assistant used through a web interface.
+  return `You are J.A.R.V.I.S. V5.6.2, a fast remote AI assistant used through a web interface.
 The heavy AI inference runs remotely, not on the user's phone or laptop.
 ${PERSONALITIES[personality]}
 Answer directly and naturally. Use Markdown when it improves clarity.${roastBlock}
@@ -547,7 +564,8 @@ export async function streamRemoteChat(args: ChatArgs) {
         fileContext,
         args.personality,
         Boolean(args.research),
-        roastLevel
+        roastLevel,
+        Boolean(args.matureRoast)
       )
     },
     ...history
