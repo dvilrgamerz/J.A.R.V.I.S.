@@ -1,6 +1,22 @@
-# J.A.R.V.I.S. V5.6.2 Adaptive Core
+# J.A.R.V.I.S. V5.6.3 Adaptive Core
 
 J.A.R.V.I.S. V5 is a **thin-client remote AI assistant**. The heavy language model does not run on the user's phone or PC.
+
+## V5.6.3 Aggressive Roast
+
+Savage/GOD + 18+ now automatically enters **AGGRESSIVE 18+** mode.
+
+- stronger ordinary profanity for timing and emphasis
+- more direct second-person roast writing
+- harder openings and closers
+- more callbacks to exact wording, typos, contradictions, and accidental self-owns
+- less softening, no compliment sandwich, no fake apology, and no "just kidding" ending
+- Savage + 18+ targets 4-8 sharper punchlines on richer prompts
+- GOD + 18+ targets 8-14 strong punchlines or a sustained roast paragraph
+- even tiny messages like `hi` get multiple punchlines in GOD + 18+
+- the UI clearly shows **AGGRESSIVE 18+** when active
+
+Protected-class slurs, threats, doxxing/private information, self-harm encouragement, and fabricated serious allegations remain blocked.
 
 ## V5.6.2 Roast Everywhere
 

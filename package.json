@@ -1,8 +1,8 @@
 {
   "name": "jarvis-web-ai",
-  "version": "5.6.2",
+  "version": "5.6.3",
   "private": true,
-  "description": "J.A.R.V.I.S. V5.6.2 Adaptive Core: bootable holographic AI command center with persistent Roast Everywhere mode, optional 18+ profanity, intent-aware routing, startup/shutdown VFX, Research, Agent Workspace, memory, files, voice and tools.",
+  "description": "J.A.R.V.I.S. V5.6.3 Adaptive Core: bootable holographic AI command center with Roast Everywhere, Aggressive 18+ Savage/GOD mode, intent-aware routing, startup/shutdown VFX, Research, Agent Workspace, memory, files, voice and tools.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
