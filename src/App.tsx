@@ -170,9 +170,9 @@ const PERSONALITY_INFO: Record<
 
 const ROAST_INFO: Record<RoastLevel, { label: string; detail: string }> = {
   off: { label: "Off", detail: "Normal J.A.R.V.I.S." },
-  light: { label: "Light", detail: "Playful jokes" },
-  savage: { label: "Savage", detail: "Sharper roast" },
-  god: { label: "GOD", detail: "Roast-battle mode" }
+  light: { label: "Light", detail: "Every reply · playful" },
+  savage: { label: "Savage", detail: "Every reply · sharp" },
+  god: { label: "GOD", detail: "Every reply · max comedy" }
 };
 
 const QUICK_PROMPTS = [
@@ -195,7 +195,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.6.1 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
+    "J.A.R.V.I.S. V5.6.2 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
   createdAt: Date.now()
 };
 
@@ -407,6 +407,9 @@ function App() {
   const [roastLevel, setRoastLevel] = useState<RoastLevel>(() =>
     readStored<RoastLevel>("jarvis.roastLevel.v5_5", "off")
   );
+  const [matureRoast, setMatureRoast] = useState<boolean>(() =>
+    readStored<boolean>("jarvis.roastMature.v5_6_2", false)
+  );
   const [modelUsed, setModelUsed] = useState("J.A.R.V.I.S. Adaptive Core");
   const [coreIntent, setCoreIntent] = useState("ADAPTIVE");
   const [routerWarm, setRouterWarm] = useState(false);
@@ -536,6 +539,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem("jarvis.roastLevel.v5_5", JSON.stringify(roastLevel));
   }, [roastLevel]);
+
+  useEffect(() => {
+    localStorage.setItem("jarvis.roastMature.v5_6_2", JSON.stringify(matureRoast));
+  }, [matureRoast]);
 
   useEffect(() => {
     if (powerState !== "booting") return;
@@ -1095,6 +1102,7 @@ function App() {
         adaptive: modelPreference === "auto" && performancePreference === "auto",
         personality,
         roastLevel,
+        matureRoast,
         research: researchMode,
         shouldStop: () => stopRequestedRef.current,
         onToken: (token, firstMs) => {
@@ -1263,6 +1271,7 @@ function App() {
         voiceConversation,
         researchMode,
         roastLevel,
+        matureRoast,
         permissions
       },
       agentPlan
@@ -1301,6 +1310,10 @@ function App() {
 
       if (["off", "light", "savage", "god"].includes(parsed.settings?.roastLevel)) {
         setRoastLevel(parsed.settings.roastLevel as RoastLevel);
+      }
+
+      if (typeof parsed.settings?.matureRoast === "boolean") {
+        setMatureRoast(parsed.settings.matureRoast);
       }
 
       if (parsed.settings?.permissions) {
@@ -1346,6 +1359,7 @@ function App() {
     setAgentPlan(null);
     setAgentGoal("");
     setRoastLevel("off");
+    setMatureRoast(false);
     setPermissions({
       microphone: true,
       files: true,
@@ -1365,7 +1379,8 @@ function App() {
       "jarvis.permissions.v4",
       "jarvis.agent.v4",
       "jarvis.research.v5",
-      "jarvis.roastLevel.v5_5"
+      "jarvis.roastLevel.v5_5",
+      "jarvis.roastMature.v5_6_2"
     ].forEach((key) => localStorage.removeItem(key));
 
     setPrivacyOpen(false);
@@ -1450,7 +1465,7 @@ function App() {
           <div className="power-brand">
             <span className="power-brand-line" />
             <strong>J.A.R.V.I.S.</strong>
-            <small>V5.6.1 · ADAPTIVE INTELLIGENCE</small>
+            <small>V5.6.2 · ADAPTIVE INTELLIGENCE</small>
           </div>
 
           <div className="power-core-stage">
@@ -1532,7 +1547,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>ADAPTIVE INTELLIGENCE · V5.6.1</p>
+            <p>ADAPTIVE INTELLIGENCE · V5.6.2</p>
           </div>
         </div>
 
@@ -1684,7 +1699,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">FRIENDLY CLOUD INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.6.1</em>
+              J.A.R.V.I.S. <em>V5.6.2</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
             <div className="v54-command-rail" aria-hidden="true">
@@ -1766,7 +1781,7 @@ function App() {
 
         <section className="v55-hero-stage">
           <div className="v55-hero-message">
-            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.6.1</span>
+            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.6.2</span>
             <h3>Helpful, creative, and ready to build with you.</h3>
             <p>
               A family-friendly AI command center for learning, coding, planning,
@@ -2007,6 +2022,20 @@ function App() {
               </button>
             ))}
           </div>
+
+          <label className={`v562-mature-toggle ${matureRoast ? "active" : ""}`}>
+            <input
+              type="checkbox"
+              checked={matureRoast}
+              onChange={(event) => setMatureRoast(event.target.checked)}
+              disabled={busy || roastLevel === "off"}
+            />
+            <span className="v562-toggle-track"><i /></span>
+            <span className="v562-toggle-copy">
+              <strong>18+ LANGUAGE</strong>
+              <small>{matureRoast ? "Profanity allowed" : "Clean language"}</small>
+            </span>
+          </label>
         </section>
         <section className="quick-actions">
           <button onClick={() => void sendMessage("/calc 12 * (3 + 4)")} disabled={busy}>
@@ -2188,6 +2217,8 @@ function App() {
               <span>{researchMode ? "RESEARCH" : backend}</span>
               <i />
               <span>{roastLevel === "off" ? "ROAST OFF" : `ROAST ${ROAST_INFO[roastLevel].label.toUpperCase()}`}</span>
+              <i />
+              <span>{roastLevel === "off" ? "18+ OFF" : matureRoast ? "18+ ON" : "18+ OFF"}</span>
               <i />
               <span>{coreIntent} INTENT</span>
               <i />
