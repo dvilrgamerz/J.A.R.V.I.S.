@@ -372,9 +372,9 @@ function makeRoastPrompt(level: RoastLevel, mature: boolean) {
   const aggressive = mature && (level === "savage" || level === "god");
 
   const language = aggressive
-    ? "AGGRESSIVE 18+ LANGUAGE is ON. Strong ordinary profanity is allowed for punch and rhythm, including words like fuck, fucking, shit, bullshit, asshole, dumbass, bitch, bastard, and motherfucker when contextually natural. Use varied profanity instead of repeating one word. Do not use protected-class slurs."
+    ? "AGGRESSIVE 18+ LANGUAGE is ON. EVERY assistant reply MUST contain at least one strong ordinary profanity word such as fuck, fucking, shit, bullshit, asshole, dumbass, bitch, bastard, or motherfucker. More than one is allowed when it improves timing. Vary the profanity instead of repeating one word. Do not use protected-class slurs."
     : mature
-      ? "Mature-language mode is ON. Natural profanity such as damn, hell, shit, and fuck is allowed when it improves timing, emphasis, or punchlines. Do not mechanically swear in every sentence."
+      ? "Mature-language mode is ON. EVERY assistant reply MUST contain at least one ordinary profanity word such as damn, hell, shit, or fuck. More is allowed when natural, but do not mechanically swear in every sentence."
       : "Keep profanity light or clean unless the user's own wording makes a mild swear natural.";
 
   const alwaysOn =
@@ -411,6 +411,28 @@ function makeRoastPrompt(level: RoastLevel, mature: boolean) {
   );
 }
 
+function ensureMatureRoastProfanity(
+  answer: string,
+  level: RoastLevel,
+  mature: boolean
+) {
+  if (!mature || level === "off") return answer;
+
+  const ordinaryProfanity =
+    /\b(?:fuck(?:ing|ed|er|ers)?|motherfuck(?:er|ers|ing)?|shit(?:ty|ting)?|bullshit|asshole|dumbass|bitch(?:es)?|bastard|damn|hell)\b/i;
+
+  if (ordinaryProfanity.test(answer)) return answer;
+
+  const fallback =
+    level === "god"
+      ? "Now there’s your fucking answer."
+      : level === "savage"
+        ? "There—now fix that shit."
+        : "There’s your damn answer.";
+
+  return `${answer.trim()}\n\n${fallback}`.trim();
+}
+
 function makeSystemPrompt(
   memories: string[],
   fileContext: string[],
@@ -433,7 +455,7 @@ function makeSystemPrompt(
 
   const roastBlock = makeRoastPrompt(roastLevel, matureRoast);
 
-  return `You are J.A.R.V.I.S. V5.6.3, a fast remote AI assistant used through a web interface.
+  return `You are J.A.R.V.I.S. V5.6.4, a fast remote AI assistant used through a web interface.
 The heavy AI inference runs remotely, not on the user's phone or laptop.
 ${PERSONALITIES[personality]}
 Answer directly and naturally. Use Markdown when it improves clarity.${roastBlock}
@@ -633,7 +655,10 @@ export async function streamRemoteChat(args: ChatArgs) {
   }
 
   const totalMs = Math.round(performance.now() - startedAt);
-  const answer = result.answer || (result.stopped ? "Generation stopped." : "");
+  const rawAnswer = result.answer || (result.stopped ? "Generation stopped." : "");
+  const answer = result.stopped
+    ? rawAnswer
+    : ensureMatureRoastProfanity(rawAnswer, roastLevel, Boolean(args.matureRoast));
   const estimatedTokens = Math.max(1, Math.round(answer.length / 4));
 
   return {
