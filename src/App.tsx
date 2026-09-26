@@ -195,7 +195,7 @@ const starterMessage: Message = {
   id: "welcome-v5",
   role: "assistant",
   content:
-    "J.A.R.V.I.S. V5.6.3 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
+    "J.A.R.V.I.S. V5.6.4 online. Core routing, Research, memory, voice, tools, and the command interface are ready.",
   createdAt: Date.now()
 };
 
@@ -1465,7 +1465,7 @@ function App() {
           <div className="power-brand">
             <span className="power-brand-line" />
             <strong>J.A.R.V.I.S.</strong>
-            <small>V5.6.3 · ADAPTIVE INTELLIGENCE</small>
+            <small>V5.6.4 · ADAPTIVE INTELLIGENCE</small>
           </div>
 
           <div className="power-core-stage">
@@ -1547,7 +1547,7 @@ function App() {
           <div className="brand-mark"><Sparkles size={20} /></div>
           <div>
             <h1>J.A.R.V.I.S.</h1>
-            <p>ADAPTIVE INTELLIGENCE · V5.6.3</p>
+            <p>ADAPTIVE INTELLIGENCE · V5.6.4</p>
           </div>
         </div>
 
@@ -1699,7 +1699,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">FRIENDLY CLOUD INTELLIGENCE</span>
             <h2>
-              J.A.R.V.I.S. <em>V5.6.3</em>
+              J.A.R.V.I.S. <em>V5.6.4</em>
             </h2>
             <p>Agent workspace · models · memory · files · tools · permissions</p>
             <div className="v54-command-rail" aria-hidden="true">
@@ -1781,7 +1781,7 @@ function App() {
 
         <section className="v55-hero-stage">
           <div className="v55-hero-message">
-            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.6.3</span>
+            <span className="v55-kicker"><Sparkles size={13} /> J.A.R.V.I.S. V5.6.4</span>
             <h3>Helpful, creative, and ready to build with you.</h3>
             <p>
               A family-friendly AI command center for learning, coding, planning,
@@ -2033,7 +2033,7 @@ function App() {
             <span className="v562-toggle-track"><i /></span>
             <span className="v562-toggle-copy">
               <strong>{matureRoast && (roastLevel === "savage" || roastLevel === "god") ? "AGGRESSIVE 18+" : "18+ LANGUAGE"}</strong>
-              <small>{matureRoast ? (roastLevel === "savage" || roastLevel === "god" ? "Heavy profanity + harder roasts" : "Profanity allowed") : "Clean language"}</small>
+              <small>{matureRoast ? (roastLevel === "savage" || roastLevel === "god" ? "Strong profanity every reply" : "Profanity every reply") : "Clean language"}</small>
             </span>
           </label>
         </section>
@@ -2218,7 +2218,7 @@ function App() {
               <i />
               <span>{roastLevel === "off" ? "ROAST OFF" : `ROAST ${ROAST_INFO[roastLevel].label.toUpperCase()}`}</span>
               <i />
-              <span>{roastLevel === "off" ? "18+ OFF" : matureRoast && (roastLevel === "savage" || roastLevel === "god") ? "AGGRESSIVE 18+" : matureRoast ? "18+ ON" : "18+ OFF"}</span>
+              <span>{roastLevel === "off" ? "18+ OFF" : matureRoast && (roastLevel === "savage" || roastLevel === "god") ? "AGGRESSIVE 18+ · SWEAR ON" : matureRoast ? "18+ · SWEAR ON" : "18+ OFF"}</span>
               <i />
               <span>{coreIntent} INTENT</span>
               <i />
